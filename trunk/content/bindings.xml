@@ -190,12 +190,20 @@
 			-->
 			
 			<constructor><![CDATA[
-				this.xPathContextToolbar.collapsed = !Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext");
+				this.initialize()
 			]]></constructor>
 			
 			<!--******************************************************************************************************
 				State management method
 			-->
+			
+			<method name="initialize">
+				<body><![CDATA[
+					if(Firebug) {
+						this.xPathContextToolbar.collapsed = !Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext");
+					}
+				]]></body>
+			</method>
 			
 			<method name="init">
 				<parameter name="context"/>
@@ -244,7 +252,9 @@
 			<method name="restore">
 				<parameter name="state"/>
 				<body><![CDATA[
-					this.copyState(state.xPathBarState, this)
+					if(state.xPathBarState) {
+						this.copyState(state.xPathBarState, this)
+					}
 				]]></body>
 			</method>
 			

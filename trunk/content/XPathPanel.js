@@ -123,6 +123,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 		this.addStyleSheet(this.document);
 		this.location = this.getDefaultLocation(this.context);
 		this.xPathBar = (this.context.chrome?this.context.chrome.$("FireXPathBar"): $("FireXPathBar"));
+		this.xPathBar.initialize();
 		this.xPathStatusBar = (this.context.chrome?this.context.chrome.$("FireXPathStatusBar"): $("FireXPathStatusBar"));
 		
 		this.ioBoxContainer = this.document.createElement("div");
@@ -195,6 +196,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 			this.xPathBar.persiste(this.context);
 		}
 		this.xPathBar = newChrome.$("FireXPathBar");
+		this.xPathBar.initialize();
 		this.xPathStatusBar = newChrome.$("FireXPathStatusBar");
 		if(this.context == FirebugContext) {
 			this.xPathBar.restore(this.context);
@@ -750,7 +752,7 @@ Firebug.XPathPanel.Element = domplate(FirebugReps.Element,
 			DIV({"class": "nodeCloseLabel"},
 				SPAN({"class": "nodeCloseLabelBox repTarget"},
 					"&lt;/",
-					SPAN({"class": "nodeTag"}, "$object.localName|toLowerCase"),
+					SPAN({"class": "nodeTag"}, "$object|getTagName"),
 					"&gt;"
 				)
 			 )
@@ -769,7 +771,7 @@ Firebug.XPathPanel.TextElement = domplate(FirebugReps.Element,
 					SPAN({"class": "nodeBracket insertBefore"}, "&gt;"),
 					SPAN({"class": "nodeText", _repObject: "$object.firstChild"}, "$object.firstChild.nodeValue"),
 					"&lt;/",
-					SPAN({"class": "nodeTag"}, "$object.localName|toLowerCase"),
+					SPAN({"class": "nodeTag"}, "$object|getTagName"),
 					"&gt;"
 				)
 			)
@@ -961,7 +963,14 @@ FBL.getTagName = function(node) {
 		prefix = getPrefixFromNS(ns);
 	}
 	
-	return (prefix?prefix + ":":"") + node.localName.toLowerCase();	
+	var name = node.localName;
+	if (node.ownerDocument instanceof HTMLDocument) {
+		//lower case only for HTML document
+		name = name.toLowerCase();
+	}
+	
+	// In firefox 3.6 the ns for html and xhtml nodes is http://www.w3.org/1999/xhtml we don't need to add a prefix for them
+	return (prefix && prefix != 'xhtml'? prefix + ":":"") + name;	
 }
 
 FBL.getPrefixFromNS = function(ns) {
