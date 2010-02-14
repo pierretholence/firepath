@@ -1,0 +1,75 @@
+/*
+ * Copyright (C) 2009  Pierre Tholence, DB4ALL
+ *
+ * This file is part of FireXPath
+ *
+ * FireXPath is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * FireXPath is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with FireXPath.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+xpathbar {
+	-moz-binding: url("chrome://firexpath/content/bindings.xml#xPathBar");
+}
+
+xpathstatusbar {
+	-moz-binding: url("chrome://firexpath/content/bindings.xml#xPathStatusBar");
+	-moz-appearance: statusbar;
+	min-height:24px;
+}
+
+/**** xPathBar *****/
+.xpath-textbox {
+	-moz-binding: url("chrome://firexpath/content/bindings.xml#xPath-textbox");
+	-moz-appearance: none;
+	border: none;
+	margin: 0;
+}
+
+.xpath-textbox[status = "error"] {
+	background-color: #FF6666;
+	color: #FFFFFF;
+}
+
+.xpath-textbox[status = "warning"] {
+	background-color: yellow;
+}
+
+.xpath-field-container {
+	-moz-appearance: textfield;
+}
+
+/**** xPathStatusBar *****/
+.xpath-result-icon[status = "error"] {
+	list-style-image: url("chrome://firebug/skin/errorIcon.png");
+}
+
+.xpath-result-icon[status = "warning"] {
+	list-style-image: url("chrome://firebug/skin/warningIcon.png");
+}
+
+.xpath-result-icon[status = "ok"] {
+	list-style-image: url("chrome://firebug/skin/okIcon-sm.png");
+}
+
+.cancel-xpath-result-loading-button {
+	height:20px;
+	width:20px;
+	padding:2px;
+	cursor:pointer;
+	border:1px solid transparent;
+	-moz-border-radius : 3px;
+}
+
+.cancel-loading-button:hover {
+	border-color: Gray;
+}

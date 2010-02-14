@@ -1,0 +1,4 @@
+content firexpath content/
+locale firexpath en-US locale/en-US/
+skin firexpath classic/1.0 skin/classic/
+overlay chrome://firebug/content/firebugOverlay.xul chrome://firexpath/content/firebugOverlay.xul
