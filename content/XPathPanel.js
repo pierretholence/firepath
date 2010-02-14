@@ -177,8 +177,10 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	},
 	
 	showModules: function(show) {
-		this.xPathBar.show(this.context, show);
-		this.xPathStatusBar.show(this.context, show);
+		try {
+			this.xPathBar.show(this.context, show);
+			this.xPathStatusBar.show(this.context, show);
+		} catch (e) {}
 		
 		var $ = FBL.$;
 		if(this.context.chrome)
@@ -1630,6 +1632,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 	
 	destroyContext: function(context, persistedState) {
 		persistedState.persistedXPathResultNotHighlighted = !!context.xPathResultNotHighlighted;
+		this.clear();
 	},
 	
 	loadedContext: function(context) {
