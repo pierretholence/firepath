@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!DOCTYPE overlay SYSTEM "chrome://firexpath/locale/FireXPath.dtd">
+<?xml-stylesheet href="chrome://firexpath/skin/FireXPath.css" type="text/css"?>
+
+<overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	
+	<script src="chrome://firexpath/content/XPathPanel.js" type="application/javascript"/>
+	
+	<stringbundleset id="stringbundleset">
+		<stringbundle id="FireXpath_strings" src="chrome://firexpath/locale/FireXPath.properties"/>
+	</stringbundleset>
+	
+	<popup id="contentAreaContextMenu">
+		<menuitem id="menu_fxpShow" label="&FireXPath.context.show.label;"
+			insertafter="context-viewpartialsource-selection"
+			oncommand="Firebug.toggleBar(true); FirebugChrome.selectPanel('xpath').updateSelection(document.popupNode)"
+			accesskey="X"/>
+	</popup>
+
+	<hbox id="fbToolbarInner">
+		<toolbarbutton id="FireXPathBarHighlightButton" collapsed="true" label="&FireXPath.highlight.button;" class="toolbar-text-button"
+			oncommand="Firebug.XPathPanel.ResultHighlightModule.toggleHighlight(FirebugContext);"
+			checked="false" disabled="true" insertafter="fbLocationList"/>
+		<xpathbar id="FireXPathBar" flex="1"  collapsed="true" insertafter="fbLocationList"/>
+	</hbox>
+	
+	<vbox id="fbContentBox">
+		<xpathstatusbar id="FireXPathStatusBar" insertafter="fbCommandBox" collapsed="true"/>
+	</vbox>
+
+</overlay>

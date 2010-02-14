@@ -1,0 +1,700 @@
+<?xml version="1.0"?>
+<!DOCTYPE bindings SYSTEM "chrome://firexpath/locale/FireXPath.dtd">
+<!--
+	Copyright (C) 2009  Pierre Tholence, DB4ALL
+	
+	This file is part of FireXPath
+	
+	FireXPath is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+	
+	FireXPath is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+	
+	You should have received a copy of the GNU General Public License
+	along with FireXPath.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<bindings xmlns="http://www.mozilla.org/xbl"
+	xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	
+	<binding id="xPath-textbox" extends="chrome://global/content/bindings/textbox.xml#textbox">
+		<implementation>
+			
+			<field name="_xPathBar">null</field>
+			<property name="xPathBar" readonly="true">
+				<getter><![CDATA[
+					return this._xPathBar ?
+					this._xPathBar : this._xPathBar = document.getBindingParent(this);
+				]]></getter>
+			</property>
+			
+			<method name="setStatus">
+				<parameter name="status"/>
+				<parameter name="info"/>
+				<body><![CDATA[
+					if(status)
+						this.setAttribute("status", status);
+					else
+						this.removeAttribute("status");
+					this.tooltipText = info || "";
+				]]></body>
+			</method>
+			
+			<method name="checkSyntax">
+				<body><![CDATA[
+					if(this.value != "" && this.xPathBar.getXPathExpression(this.value) == null)
+						this.setStatus("error", FBL.$STR_XP("invaliXPathError"));
+					else
+						this.setStatus();
+				]]></body>
+			</method>
+			
+			<method name="setValue">
+				<parameter name="value"/>
+				<body><![CDATA[
+					this.value = value;
+					this.checkSyntax();
+				]]></body>
+			</method>
+		</implementation>
+		<handlers>
+			<handler event="input"><![CDATA[
+				this.checkSyntax();
+				this.xPathBar.autoCompleter.reset();
+			]]></handler>
+			<handler event="keypress"><![CDATA[
+				switch (event.keyCode) {
+					case KeyEvent.DOM_VK_RETURN:
+						this.xPathBar.evaluate();
+						break;
+					case KeyEvent.DOM_VK_UP:
+						this.xPathBar.autoCompleter.complete(FirebugContext, this, true, true);
+						this.checkSyntax();
+						break;
+					case KeyEvent.DOM_VK_TAB:
+						event.preventDefault();
+					case KeyEvent.DOM_VK_DOWN:
+						this.xPathBar.autoCompleter.complete(FirebugContext, this, true, false);
+						this.checkSyntax();
+						break;
+				}
+			]]></handler>
+		</handlers>
+	</binding>
+	
+	<binding id="xPathBar" extends="xul:hbox">
+		<content>
+			<xul:toolbarseparator/>
+			<xul:toolbaritem align="center" flex="6">
+				<xul:label value="&FireXPath.xPath.label;" control="xPathBar-xpath-textbox" accesskey="&FireXPath.xPath.key;"/>
+				<xul:hbox class="xpath-field-container" flex="1">
+					<xul:textbox anonid="xpath-textbox" id="xPathBar-xpath-textbox" class="xpath-textbox" minwidth="100" flex="1"/>
+				</xul:hbox>
+			</xul:toolbaritem>
+			<xul:toolbaritem anonid="xpath-context-toolbar" align="center" flex="1">
+				<xul:label value="&FireXPath.context.label;" control="xPathBar-xpath-context-textbox" accesskey="&FireXPath.context.key;"/>
+				<xul:hbox class="xpath-field-container" flex="1">
+					<xul:textbox anonid="xpath-context-textbox" id="xPathBar-xpath-context-textbox" class="xpath-textbox" flex="1"/>
+				</xul:hbox>
+				<xul:textbox anonid="xpath-context-node-number-textbox"
+					type="number"
+					size="1"
+					min="1"
+					onchange="document.getBindingParent(this).evaluate();"
+					collapsed="true"
+					increment="1"/>
+			</xul:toolbaritem>
+			<xul:toolbarbutton label="&FireXPath.eval.button;" oncommand="document.getBindingParent(this).evaluate();">
+			</xul:toolbarbutton>
+		</content>
+		<implementation>
+			
+			<!--******************************************************************************************************
+				fields and properties
+			-->
+			
+			<field name="NSResolver">null</field>
+			<field name="xPathContextNodes">null</field>
+			<field name="lastXPath">null</field>
+			<field name="lastContext">null</field>
+			<field name="lastXPathContext">null</field>
+			<field name="_evaluator">null</field>
+			
+			<property name="autoCompleter" readonly="true">
+				<getter><![CDATA[
+					return this._autoCompleter ?
+					this._autoCompleter : this._autoCompleter = new Firebug.XPathPanel.xPathAutoCompleter(this);
+				]]></getter>
+			</property>
+			
+			<property name="evaluator" readonly="true">
+				<getter><![CDATA[
+					return this._evaluator ?
+					this._evaluator : this._evaluator = new XPathEvaluator();
+				]]></getter>
+			</property>
+			
+			<property name="xPath">
+				<getter><![CDATA[
+					return this.getElement("xpath-textbox").value;
+				]]></getter>
+				<setter><![CDATA[
+					this.getElement("xpath-textbox").setValue(val);
+					return val;
+				]]></setter>
+			</property>
+			
+			<property name="xPathContext">
+				<getter><![CDATA[
+					var textbox = this.getElement("xpath-context-textbox");
+					if(textbox.value == "")
+						textbox.value = "/";
+					return textbox.value;
+				]]></getter>
+				<setter><![CDATA[
+					this.getElement("xpath-context-textbox").setValue(val);
+					return val;
+				]]></setter>
+			</property>
+			
+			<property name="xPathContextNodeNumber" readonly="true">
+				<getter><![CDATA[
+					return this.getElement("xpath-context-node-number-textbox");
+				]]></getter>
+			</property>
+			
+			<property name="xPathContextToolbar" readonly="true">
+				<getter><![CDATA[
+					return this.getElement("xpath-context-toolbar");
+				]]></getter>
+			</property>
+			
+			<property name="highlightButton" readonly="true">
+				<getter><![CDATA[
+					return this.getElement("highlight-button");
+				]]></getter>
+			</property>
+			
+			<property name="xPathPanel" readonly="true">
+				<getter><![CDATA[	
+					return FirebugContext.getPanel(Firebug.XPathPanel.prototype.name);
+				]]></getter>
+			</property>
+			
+			<!--******************************************************************************************************
+				Constructor
+			-->
+			
+			<constructor><![CDATA[
+				this.initialize()
+			]]></constructor>
+			
+			<!--******************************************************************************************************
+				State management method
+			-->
+			
+			<method name="initialize">
+				<body><![CDATA[
+					if(Firebug) {
+						this.xPathContextToolbar.collapsed = !Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext");
+					}
+				]]></body>
+			</method>
+			
+			<method name="init">
+				<parameter name="context"/>
+				<body><![CDATA[
+					this.NSResolver = this.createNSResolver(context.window.document);
+					this.xPath = "";
+					this.xPathContext = "/";
+					this.xPathContextNodeNumber.collapsed = true;
+					this.xPathContextNodes = null;
+					this.lastXPath = "";
+					this.lastContext = null;
+					context.xPathBarInit = true;
+				]]></body>
+			</method>
+
+			<method name="show">
+				<parameter name="context"/>
+				<parameter name="show"/>
+				<body><![CDATA[
+					this.collapsed = !show;
+					if(show) {
+						this.currentContext = context; 
+						if(!context.xPathBarInit)
+							this.init(context);
+						else
+							this.restore(context);
+						var that = this
+						setTimeout(function() {
+							that.getElement("xpath-textbox").focus();
+						},10)
+					} else {
+						if(context == this.currentContext)
+							this.persiste(context);
+					}
+				]]></body>
+			</method>
+			
+			<method name="persiste">
+				<parameter name="state"/>
+				<body><![CDATA[
+					if(!state.xPathBarState) state.xPathBarState = {};
+					this.copyState(this, state.xPathBarState);
+				]]></body>
+			</method>
+			
+			<method name="restore">
+				<parameter name="state"/>
+				<body><![CDATA[
+					if(state.xPathBarState) {
+						this.copyState(state.xPathBarState, this)
+					}
+				]]></body>
+			</method>
+			
+			<method name="copyState">
+				<parameter name="from"/>
+				<parameter name="to"/>
+				<body><![CDATA[
+					to.xPath = from.xPath;
+					to.xPathContext = from.xPathContext;
+					if(!to.xPathContextNodeNumber) to.xPathContextNodeNumber = {};
+					to.xPathContextNodeNumber.value = from.xPathContextNodeNumber.value;
+					to.xPathContextNodeNumber.max = from.xPathContextNodeNumber.max;
+					to.xPathContextNodeNumber.collapsed = from.xPathContextNodeNumber.collapsed;
+					to.xPathContextNodes = from.xPathContextNodes;
+					to.NSResolver = from.NSResolver;
+					to.lastXPath = from.lastXPath;
+					to.lastContext = from.lastContext;
+				]]></body>
+			</method>
+			
+			<!--******************************************************************************************************
+				XPath Evaluation methods
+			-->
+			
+			<method name="evaluate">
+				<parameter name="reevaluate"/>
+				<body><![CDATA[
+					var xPath = this.xPath;
+					if(reevaluate)
+						xPath = this.lastXPath;
+					
+					var context = this.getContextNode(reevaluate);
+					if(xPath != "") {
+						
+						if(!reevaluate && this.lastXPath == xPath && this.lastContext == context)
+							return;
+							
+						var contextTextbox = this.getElement("xpath-context-textbox");
+						if(context) {
+							contextTextbox.setStatus();
+							if(FBL.trimLeft(this.xPath).indexOf("/") == 0 && FBL.trimLeft(this.xPathContext) != "/") {
+								context = null;
+								contextTextbox.setStatus("warning", FBL.$STR_XP("unusedParentNode"));
+							}
+						}
+						
+						var result = this._evaluateExpression(this.xPath, context);
+						this.lastXPath = this.xPath;
+						this.lastContext = context;
+						this.xPathPanel.setResult(context, result);
+					} else {
+						this.lastXPath = "";
+						this.xPathPanel.setResult(context, null);
+					}
+				]]></body>
+			</method>
+			
+			<method name="getXPathExpression">
+				<parameter name="xPath"/>
+				<body><![CDATA[
+					try {
+						return this.evaluator.createExpression(xPath, this.NSResolver);
+					} catch (e) {
+						return null;
+					}
+				]]></body>
+			</method>
+			
+			<method name="_evaluateExpression">
+				<parameter name="xPath"/>
+				<parameter name="contextNode"/>
+				<body><![CDATA[
+					Firebug.XPathPanel.ResultHighlightModule.clear(this.xPathPanel.location.document);
+					var xPathExpression = this.getXPathExpression(xPath);
+					if(!xPathExpression) return new Error("invaliXPathError");
+					
+					var result;
+					try{
+						result = xPathExpression.evaluate(contextNode || this.xPathPanel.location.document, XPathResult.ANY_TYPE, null);
+					} catch(e) {
+						return new Error("invaliXPathError");
+					}
+					return this.processResult(result);
+				]]></body>
+			</method>
+			
+			<method name="createNSResolver">
+				<parameter name="doc"/>
+				<body><![CDATA[
+					var prefixToNS = this.getMappingPrefixNS(doc);
+					return function(prefix) {
+						return prefixToNS[prefix] || null;
+					}
+				]]></body>
+			</method>
+			
+			<method name="getMappingPrefixNS">
+				<parameter name="doc"/>
+				<body><![CDATA[
+					var result = doc.evaluate("//*[namespace-uri() != '']", doc, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+					var nsToPrefix = {};
+					var prefixToNS = {};
+					for ( var i=0, L=result.snapshotLength ; i < L; i++ ) {
+						var node = result.snapshotItem(i);
+						var ns = node.namespaceURI;
+						if(ns) {
+							var prefix = node.lookupPrefix(ns);
+							if(!prefix) {
+								if(!(ns in nsToPrefix)) {
+									nsToPrefix[ns] = FBL.getPrefixFromNS(ns);
+								}
+								prefix = nsToPrefix[ns];
+							}
+							if(!(prefix in prefixToNS))
+								prefixToNS[prefix] = ns;
+						}
+					}
+					return prefixToNS;
+				]]></body>
+			</method>
+			
+			<method name="getContextNode" readonly="true">
+				<parameter name="reevaluate"/>
+				<body><![CDATA[
+					if(this.xPathContextToolbar.collapsed)
+						return null;
+					if(!reevaluate && this.xPathContextNodes && this.lastXPathContext == this.xPathContext)
+						return this.xPathContextNodes[this.xPathContextNodeNumber.value - 1];
+					else {
+						var nodes = this._evaluateExpression(this.xPathContext);
+						
+						this.lastXPathContext = this.xPathContext;
+						
+						if(FBL.isArray(nodes) && nodes.length > 0) {
+							if(!reevaluate) {
+								this.xPathContextNodeNumber.collapsed = (nodes.length == 1);
+								this.xPathContextNodeNumber.max = nodes.length;
+								this.xPathContextNodeNumber.value = 1;
+								this.xPathContextNodes = nodes;
+								this.getElement("xpath-context-textbox").setStatus();
+								return nodes[0];
+							} else {
+								this.xPathContextNodes = nodes;
+								return nodes[this.xPathContextNodeNumber.value - 1];
+							}
+						} else {
+							this.xPathContextNodeNumber.collapsed = true;
+							this.xPathContextNodeNumber.value = 1;
+							this.xPathContextNodes = [null];
+							if(!(nodes instanceof Error))
+								this.getElement("xpath-context-textbox").setStatus("warning", FBL.$STR_XP("noParentNodeSelected"));
+							return null;
+						}
+					}
+				]]></body>
+			</method>
+			
+			<!--******************************************************************************************************
+				public methods, used by the panel
+			-->
+			
+			<method name="setNode">
+				<parameter name="node"/>
+				<parameter name="noEval"/>
+				<body><![CDATA[
+					this.xPath = FBL.getXPathFromNode(node, this.getContextNode());
+					if(!noEval)
+						this.evaluate();
+				]]></body>
+			</method>
+			
+			<method name="setContextNode">
+				<parameter name="node"/>
+				<body><![CDATA[
+					this.xPathContext = FBL.getXPathFromNode(node);
+					this.evaluate();
+				]]></body>
+			</method>
+			
+			<method name="updateLocation">
+				<parameter name="location"/>
+				<body><![CDATA[
+					this.NSResolver = this.createNSResolver(location.document);
+					this.reset();
+				]]></body>
+			</method>
+			
+			<method name="reset">
+				<body><![CDATA[
+					delete this.lastXPath;
+					delete this.lastContext;
+					delete this.lastXPathContext;
+				]]></body>
+			</method>
+			
+			<method name="showXPathContext">
+				<parameter name="show"/>
+				<body><![CDATA[
+					this.xPathContextToolbar.collapsed = !show;
+					this.reset();
+				]]></body>
+			</method>
+			
+			<!--******************************************************************************************************
+				public methods, used by the autoCompleter
+			-->
+			
+			<method name="hasResult">
+				<parameter name="xPath"/>
+				<body><![CDATA[
+					var xPathExpression = this.getXPathExpression(xPath);
+					if(!xPathExpression) return false;
+					
+					var result;
+					try{
+						result = xPathExpression.evaluate(this.getContextNode() || this.xPathPanel.location.document, XPathResult.ANY_UNORDERED_NODE_TYPE, null);
+					} catch(e) {
+						return false;
+					}
+					return result.singleNodeValue != null;
+				]]></body>
+			</method>
+			
+			<method name="evaluateExpression">
+				<parameter name="xPath"/>
+				<body><![CDATA[
+					var xPathExpression = this.getXPathExpression(xPath);
+					if(!xPathExpression) return null;
+					
+					var result;
+					try{
+						result = xPathExpression.evaluate(this.getContextNode() || this.xPathPanel.location.document, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+					} catch(e) {
+						return null;
+					}
+					return this.processResult(result);
+				]]></body>
+			</method>
+			
+			<!--******************************************************************************************************
+				Helper Methods
+			-->
+				
+			<method name="getElement">
+				<parameter name="aAnonymousID"/>
+				<body><![CDATA[
+					return document.getAnonymousElementByAttribute(this, "anonid", aAnonymousID);
+				]]></body>
+			</method>
+			
+			<method name="processResult">
+				<parameter name="evaluationResult"/>
+				<body><![CDATA[
+				switch(evaluationResult.resultType) {
+					case XPathResult.NUMBER_TYPE:
+						return evaluationResult.numberValue;
+					case XPathResult.STRING_TYPE:
+						return evaluationResult.stringValue;
+					case XPathResult.BOOLEAN_TYPE:
+						return evaluationResult.booleanValue;
+					default:
+						var result = [];
+						var node;
+						while (node = evaluationResult.iterateNext()) {
+							//make sure it is not a node created by firebug
+							if(node.firebugIgnore ||
+								(node.ownerElement && node.ownerElement.firebugIgnore) ||
+								(node.parentNode && node.parentNode.firebugIgnore) ||
+								node.id == "_firebugConsole")
+									continue; 
+							result.push(node);
+						}
+						return result;
+				}
+				]]></body>
+			</method>
+		</implementation>
+	</binding>
+	
+	<binding id="xPathStatusBar" extends="xul:hbox">
+		<content>
+			<xul:statusbarpanel flex="1" align="center" pack="left">
+				<xul:image anonid="xpath-result-icon" class="xpath-result-icon"/>
+				<xul:label  anonid="xpath-result-info" value=""/>
+			</xul:statusbarpanel>
+			<xul:statusbarpanel anonid="xpath-result-progressmeter-container" collapsed="true">
+				<xul:image src="chrome://firebug/skin/errorIcon.png" 
+					onmousedown="document.getBindingParent(this).cancelLoading(FirebugContext)" 
+					class="cancel-xpath-result-loading-button"/>
+				<xul:progressmeter anonid="xpath-result-progressmeter"/>
+			</xul:statusbarpanel>
+		</content>
+		<implementation>
+			
+			<!--******************************************************************************************************
+				fields and properties
+			-->
+			
+			<property name="progressMeter" readonly="true">
+				<getter><![CDATA[
+					return this.getElement("xpath-result-progressmeter");
+				]]></getter>
+			</property>
+			
+			<property name="progressMeterContainer" readonly="true">
+				<getter><![CDATA[
+					return this.getElement("xpath-result-progressmeter-container");
+				]]></getter>
+			</property>
+			
+			<property name="resultInfo">
+				<getter><![CDATA[
+					return this.getElement("xpath-result-info").value;
+				]]></getter>
+				<setter><![CDATA[
+					this.getElement("xpath-result-info").value = val;
+					return val;
+				]]></setter>
+			</property>
+			
+			<property name="resultIcon">
+				<getter><![CDATA[
+					return this.getElement("xpath-result-icon").getAttribute("status");
+				]]></getter>
+				<setter><![CDATA[
+					this.getElement("xpath-result-icon").setAttribute("status", val);
+					return val;
+				]]></setter>
+			</property>
+			
+			<!--******************************************************************************************************
+				ProgressMeter management
+			-->
+			
+			<method name="startLoading">
+				<parameter name="context"/>
+				<parameter name="stepNumber"/>
+				<body><![CDATA[
+					context.xPathStatusBar.loading = true;
+					context.xPathStatusBar.stepNumber = stepNumber;
+					context.xPathStatusBar.currentStep = 0;
+					this.progressMeter.value = 0;
+					this.progressMeterContainer.collapsed = false;
+				]]></body>
+			</method>
+			
+			<method name="increaseLoading">
+				<parameter name="context"/>
+				<body><![CDATA[
+					context.xPathStatusBar.currentStep += 1;
+					if(context.xPathStatusBar.shown)
+						this.progressMeter.value = context.xPathStatusBar.currentStep / context.xPathStatusBar.stepNumber * 100;
+				]]></body>
+			</method>
+			
+			<method name="stopLoading">
+				<parameter name="context"/>
+				<body><![CDATA[
+					delete context.xPathStatusBar.loading;
+					this.progressMeterContainer.collapsed = true;
+				]]></body>
+			</method>
+			
+			<method name="cancelLoading">
+				<parameter name="context"/>
+				<body><![CDATA[
+					var panel = context.getPanel(Firebug.XPathPanel.prototype.name);
+					panel.stopLoading();
+					panel.xPathBar.reset();
+					this.resultInfo = this.resultInfo + " (" + FBL.$STR_XP("nodeSelectedMessage", context.xPathStatusBar.currentStep) + ")";
+					context.xPathStatusBar.resultInfo = this.resultInfo;
+				]]></body>
+			</method>
+			
+			
+			
+			<!--******************************************************************************************************
+				Result info management
+			-->
+			
+			<method name="setResultInfo">
+				<parameter name="context"/>
+				<parameter name="status"/>
+				<parameter name="info"/>
+				<body><![CDATA[
+					context.xPathStatusBar.resultInfo = info;
+					this.resultInfo = info;
+					context.xPathStatusBar.resultIcon = status;
+					this.resultIcon = status;
+				]]></body>
+			</method>
+			
+			<method name="clearResultInfo">
+				<parameter name="context"/>
+				<body><![CDATA[
+					delete context.xPathStatusBar.resultInfo;
+					this.resultInfo = "";
+					delete context.xPathStatusBar.resultIcon;
+					this.resultIcon = "";
+				]]></body>
+			</method>
+			
+			<!--******************************************************************************************************
+				other public methods
+			-->
+
+			<method name="show">
+				<parameter name="context"/>
+				<parameter name="show"/>
+				<body><![CDATA[
+					if(!context.xPathStatusBar)
+						context.xPathStatusBar = {};
+					if(show) {
+						this.resultInfo = context.xPathStatusBar.resultInfo || "";
+						this.resultIcon = context.xPathStatusBar.resultIcon || "";
+						this.progressMeterContainer.collapsed = !context.xPathStatusBar.loading;
+					}
+					context.xPathStatusBar.shown = show;
+					this.collapsed = !show;
+				]]></body>
+			</method>
+			
+			<method name="reset">
+				<parameter name="context"/>
+				<body><![CDATA[
+					this.clearResultInfo(context);
+				]]></body>
+			</method>
+			
+			<!--******************************************************************************************************
+				Helper Methods
+			-->
+				
+			<method name="getElement">
+				<parameter name="aAnonymousID"/>
+				<body><![CDATA[
+					return document.getAnonymousElementByAttribute(this, "anonid", aAnonymousID);
+				]]></body>
+			</method>
+
+		</implementation>
+	</binding>
+</bindings>
