@@ -15,7 +15,7 @@
     </em:targetApplication>
     
     <em:name>FireXPath</em:name>
-    <em:description>FireXPath is a Firebug extension that adds a development tool to edit, inspect and generate XPath expressions. </em:description>
+    <em:description>FireXPath is a Firebug extension that adds a development tool to edit, inspect and generate XPath 1.0 expressions. </em:description>
     <em:creator>Pierre Tholence</em:creator>
     <em:iconURL>chrome://firexpath/content/FireXPath.png</em:iconURL>
   </Description>
