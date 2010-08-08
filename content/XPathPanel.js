@@ -28,6 +28,8 @@ const prefRegExp = new RegExp(panelName + "\.(.*)");
 
 const defaultTimePeriod = 100;
 
+const xhtmlNS = 'http://www.w3.org/1999/xhtml';
+
 // ************************************************************************************************
 // XPath Tokens from XPath V1 W3C Recommendation on http://www.w3.org/TR/xpath
 
@@ -1673,7 +1675,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 	
 	refreshHighlightButton: function(panel) {
 		if(panel.evaluationResult != null && isArray(panel.evaluationResult) &&
-			panel.evaluationResult.some(function(e) {return e.nodeType == 1 && e.namespaceURI == null})) 
+			panel.evaluationResult.some(function(e) {return e.nodeType == 1 && (e.namespaceURI == null || e.namespaceURI == xhtmlNS)})) 
 		{
 			this.highlightButton.setAttribute("checked", !panel.context.xPathResultNotHighlighted);
 			this.highlightButton.setAttribute("disabled", false);
@@ -1713,7 +1715,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 			var head = doc.getElementsByTagName("head")[0]
 			if(head) {
 				if(!context.fireXPathStyleSheet) {
-					var styleSheet = document.createElementNS("http://www.w3.org/1999/xhtml", "style");
+					var styleSheet = document.createElementNS(xhtmlNS, "style");
 					styleSheet.firebugIgnore = true;
 					styleSheet.setAttribute("type", "text/css");
 					styleSheet.setAttribute("id", "firexpath-matching-node-style");
