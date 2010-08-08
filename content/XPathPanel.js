@@ -722,21 +722,6 @@ Firebug.XPathPanel.Document = domplate(FirebugReps.Document,
 		)
 });
 
-FirebugReps.Element.filterFireXPathClass = function(attrs) {
-	for (var i=0; i<attrs.length; i++) {
-		var attr = attrs[i];
-		if(attr.localName == "class" && attr.nodeValue == "firexpath-matching-node") {
-			attrs.splice(i, 1);
-			break;
-		}
-	}
-	return attrs;
-}
-
-FirebugReps.Element.filterFireXPathClassValue = function(value) {
-	return value.replace(" firexpath-matching-node", "");
-},
-
 Firebug.XPathPanel.Element = domplate(FirebugReps.Element,
 {
 	tag:
@@ -758,10 +743,25 @@ Firebug.XPathPanel.Element = domplate(FirebugReps.Element,
 					"&gt;"
 				)
 			 )
-		)
+		),
+	filterFireXPathClassValue: 
+		function(value) {
+			return value.replace(" firexpath-matching-node", "");
+		},
+	filterFireXPathClass:
+		function(attrs) {
+			for (var i=0; i<attrs.length; i++) {
+				var attr = attrs[i];
+				if(attr.localName == "class" && attr.nodeValue == "firexpath-matching-node") {
+					attrs.splice(i, 1);
+					break;
+				}
+			}
+			return attrs;
+		}
 });
 
-Firebug.XPathPanel.TextElement = domplate(FirebugReps.Element,
+Firebug.XPathPanel.TextElement = domplate(Firebug.XPathPanel.Element,
 {
 	tag:
 		DIV({"class": "nodeBox textNodeBox repIgnore", _repObject: "$object"},
@@ -771,16 +771,19 @@ Firebug.XPathPanel.TextElement = domplate(FirebugReps.Element,
 					SPAN({"class": "nodeTag"}, "$object|getTagName"),
 					FOR("attr", "$object|attrIterator|filterFireXPathClass", Firebug.XPathPanel.Attr.tag),
 					SPAN({"class": "nodeBracket insertBefore"}, "&gt;"),
-					SPAN({"class": "nodeText", _repObject: "$object.firstChild"}, "$object.firstChild.nodeValue"),
+					SPAN({"class": "nodeText", _repObject: "$object.firstChild"}, "$object.firstChild.nodeValue|unescapeWhitespace"),
 					"&lt;/",
 					SPAN({"class": "nodeTag"}, "$object|getTagName"),
 					"&gt;"
 				)
 			)
-		)
+		),
+	unescapeWhitespace: function(value) {
+		return value.replace(/ /gm, '\u00a0');
+	}
 });
 
-Firebug.XPathPanel.EmptyElement = domplate(FirebugReps.Element,
+Firebug.XPathPanel.EmptyElement = domplate(Firebug.XPathPanel.Element,
 {
 	tag:
 		DIV({"class": "nodeBox emptyNodeBox repIgnore", _repObject: "$object"},
@@ -795,11 +798,11 @@ Firebug.XPathPanel.EmptyElement = domplate(FirebugReps.Element,
 		)
 });
 
-Firebug.XPathPanel.TextNode = domplate(FirebugReps.Element,
+Firebug.XPathPanel.TextNode = domplate(Firebug.XPathPanel.TextElement,
 {
 	tag:
 		DIV({"class": "nodeBox", _repObject: "$object"},
-			SPAN({"class": "nodeText"}, "$object.nodeValue")
+			SPAN({"class": "nodeText"}, "$object.nodeValue|unescapeWhitespace")
 		)
 });
 
