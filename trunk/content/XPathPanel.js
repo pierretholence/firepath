@@ -771,15 +771,15 @@ Firebug.XPathPanel.TextElement = domplate(Firebug.XPathPanel.Element,
 					SPAN({"class": "nodeTag"}, "$object|getTagName"),
 					FOR("attr", "$object|attrIterator|filterFireXPathClass", Firebug.XPathPanel.Attr.tag),
 					SPAN({"class": "nodeBracket insertBefore"}, "&gt;"),
-					SPAN({"class": "nodeText", _repObject: "$object.firstChild"}, "$object.firstChild.nodeValue|unescapeWhitespace"),
+					SPAN({"class": "nodeText", _repObject: "$object.firstChild"}, "$object.firstChild.nodeValue|escapeWhitespace"),
 					"&lt;/",
 					SPAN({"class": "nodeTag"}, "$object|getTagName"),
 					"&gt;"
 				)
 			)
 		),
-	unescapeWhitespace: function(value) {
-		return value.replace(/ /gm, '\u00a0');
+	escapeWhitespace: function(value) {
+		return escapeWhitespace(value)
 	}
 });
 
@@ -802,7 +802,7 @@ Firebug.XPathPanel.TextNode = domplate(Firebug.XPathPanel.TextElement,
 {
 	tag:
 		DIV({"class": "nodeBox", _repObject: "$object"},
-			SPAN({"class": "nodeText"}, "$object.nodeValue|unescapeWhitespace")
+			SPAN({"class": "nodeText"}, "$object.nodeValue|escapeWhitespace")
 		)
 });
 
@@ -936,6 +936,10 @@ function arrayIterator(array) {
 	for(var i = 0, length = array.length; i < length; i++) {
 		yield array[i];
 	}
+}
+
+function escapeWhitespace(value) {
+	return value.replace(' ', '\u00a0', 'gm');
 }
 
 // ************************************************************************************************
@@ -1104,7 +1108,7 @@ InsideOutBox.prototype = extend(InsideOutBox.prototype, {
 		
 				// This get the node that contains the text we are looking for
 				nodeToSelect = Array.filter(textNodes, function(textNode) {
-					return textNode.textContent == object.nodeValue;
+					return textNode.textContent == escapeWhitespace(object.nodeValue);
 				})[0];
 			}
 			
