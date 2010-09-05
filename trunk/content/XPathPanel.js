@@ -1763,7 +1763,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 		var element;
 		while(element = this.highlightedElement.pop()) {
 			removeClass(element, "firexpath-matching-node");
-			if (element.className.length === 0) {
+			if (element.className === '' || (element.className && element.className.trim().length === 0)) {
 				element.removeAttribute("class");
 			}
 		}
