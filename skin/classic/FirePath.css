@@ -1,67 +1,67 @@
 /*
- * Copyright (C) 2009  Pierre Tholence, DB4ALL
+ * Copyright (C) 2009 - 2010 Pierre Tholence
  *
- * This file is part of FireXPath
+ * This file is part of FirePath
  *
- * FireXPath is free software: you can redistribute it and/or modify
+ * FirePath is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FireXPath is distributed in the hope that it will be useful,
+ * FirePath is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with FireXPath.  If not, see <http://www.gnu.org/licenses/>.
+ * along with FirePath.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-xpathbar {
-	-moz-binding: url("chrome://firexpath/content/bindings.xml#xPathBar");
+firepathbar {
+	-moz-binding: url("chrome://firepath/content/bindings.xml#FirePathBar");
 }
 
-xpathstatusbar {
-	-moz-binding: url("chrome://firexpath/content/bindings.xml#xPathStatusBar");
+firepathstatusbar {
+	-moz-binding: url("chrome://firepath/content/bindings.xml#FirePathStatusBar");
 	-moz-appearance: statusbar;
 	min-height:24px;
 }
 
-/**** xPathBar *****/
-.xpath-textbox {
-	-moz-binding: url("chrome://firexpath/content/bindings.xml#xPath-textbox");
+/**** FirePathBar *****/
+.firepath-textbox {
+	-moz-binding: url("chrome://firepath/content/bindings.xml#FirePath-textbox");
 	-moz-appearance: none;
 	border: none;
 	margin: 0;
 }
 
-.xpath-textbox[status = "error"] {
+.firepath-textbox[status = "error"] {
 	background-color: #FF6666;
 	color: #FFFFFF;
 }
 
-.xpath-textbox[status = "warning"] {
+.firepath-textbox[status = "warning"] {
 	background-color: yellow;
 }
 
-.xpath-field-container {
+.firepath-field-container {
 	-moz-appearance: textfield;
 }
 
-/**** xPathStatusBar *****/
-.xpath-result-icon[status = "error"] {
+/**** FirePathStatusBar *****/
+.firepath-result-icon[status = "error"] {
 	list-style-image: url("chrome://firebug/skin/errorIcon.png");
 }
 
-.xpath-result-icon[status = "warning"] {
+.firepath-result-icon[status = "warning"] {
 	list-style-image: url("chrome://firebug/skin/warningIcon.png");
 }
 
-.xpath-result-icon[status = "ok"] {
+.firepath-result-icon[status = "ok"] {
 	list-style-image: url("chrome://firebug/skin/okIcon-sm.png");
 }
 
-.cancel-xpath-result-loading-button {
+.firepath-cancel-result-loading-button {
 	height:20px;
 	width:20px;
 	padding:2px;
