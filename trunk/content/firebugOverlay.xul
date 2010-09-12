@@ -1,31 +1,31 @@
 <?xml version="1.0"?>
-<!DOCTYPE overlay SYSTEM "chrome://firexpath/locale/FireXPath.dtd">
-<?xml-stylesheet href="chrome://firexpath/skin/FireXPath.css" type="text/css"?>
+<!DOCTYPE overlay SYSTEM "chrome://firepath/locale/FirePath.dtd">
+<?xml-stylesheet href="chrome://firepath/skin/FirePath.css" type="text/css"?>
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 	
-	<script src="chrome://firexpath/content/XPathPanel.js" type="application/javascript"/>
+	<script src="chrome://firepath/content/FirePathPanel.js" type="application/javascript"/>
 	
 	<stringbundleset id="stringbundleset">
-		<stringbundle id="FireXpath_strings" src="chrome://firexpath/locale/FireXPath.properties"/>
+		<stringbundle id="Firepath_strings" src="chrome://firepath/locale/FirePath.properties"/>
 	</stringbundleset>
 	
 	<popup id="contentAreaContextMenu">
-		<menuitem id="menu_fxpShow" label="&FireXPath.context.show.label;"
+		<menuitem id="menu_fpShow" label="&FirePath.context.show.label;"
 			insertafter="context-viewpartialsource-selection"
-			oncommand="Firebug.toggleBar(true); FirebugChrome.selectPanel('xpath').updateSelection(document.popupNode)"
-			accesskey="X"/>
+			oncommand="Firebug.toggleBar(true); FirebugChrome.selectPanel('firepath').updateSelection(document.popupNode)"
+			accesskey="&FirePath.context.show.key;"/>
 	</popup>
 
 	<hbox id="fbToolbarInner">
-		<toolbarbutton id="FireXPathBarHighlightButton" collapsed="true" label="&FireXPath.highlight.button;" class="toolbar-text-button"
-			oncommand="Firebug.XPathPanel.ResultHighlightModule.toggleHighlight(FirebugContext);"
+		<toolbarbutton id="FirePathBarHighlightButton" collapsed="true" label="&FirePath.highlight.button;" class="toolbar-text-button"
+			oncommand="Firebug.FirePathPanel.ResultHighlightModule.toggleHighlight(FirebugContext);"
 			checked="false" disabled="true" insertafter="fbLocationList"/>
-		<xpathbar id="FireXPathBar" flex="1"  collapsed="true" insertafter="fbLocationList"/>
+		<firepathbar id="FirePathBar" flex="1"  collapsed="true" insertafter="fbLocationList"/>
 	</hbox>
 	
 	<vbox id="fbContentBox">
-		<xpathstatusbar id="FireXPathStatusBar" insertafter="fbCommandBox" collapsed="true"/>
+		<firepathstatusbar id="FirePathStatusBar" insertafter="fbCommandBox" collapsed="true"/>
 	</vbox>
 
 </overlay>

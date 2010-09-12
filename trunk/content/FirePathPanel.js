@@ -1,20 +1,20 @@
 /* 
- * Copyright (C) 2009  Pierre Tholence, DB4ALL
+ * Copyright (C) 2009 - 2010 Pierre Tholence
  *
- * This file is part of FireXPath
+ * This file is part of FirePath
  *
- * FireXPath is free software: you can redistribute it and/or modify
+ * FirePath is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * FireXPath is distributed in the hope that it will be useful,
+ * FirePath is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with FireXPath.  If not, see <http://www.gnu.org/licenses/>.
+ * along with FirePath.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 FBL.ns(function() { with (FBL) {
@@ -22,7 +22,7 @@ FBL.ns(function() { with (FBL) {
 // ************************************************************************************************
 // Constants
 
-const panelName = "xpath";
+const panelName = "firepath";
 
 const prefRegExp = new RegExp(panelName + "\.(.*)");
 
@@ -108,25 +108,25 @@ var expressionToken = new RegExp("\\]|\\)|\\*" + NameTest + "|" + Literal + "|" 
 var getNamespace = new RegExp("([^:]+:).*");
 
 // ************************************************************************************************
-// XPathPanel
+// FirePathPanel
 
-Firebug.XPathPanel = function() {}
-Firebug.XPathPanel.prototype = extend(Firebug.Panel,
+Firebug.FirePathPanel = function() {}
+Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 {
 	
 	// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 	// extends Panel ()
 	
 	name: panelName,
-	title: "XPath",
+	title: "FirePath",
 
 	initialize: function() {
 		Firebug.Panel.initialize.apply(this, arguments);
 		this.addStyleSheet(this.document);
 		this.location = this.getDefaultLocation(this.context);
-		this.xPathBar = (this.context.chrome?this.context.chrome.$("FireXPathBar"): $("FireXPathBar"));
-		this.xPathBar.initialize();
-		this.xPathStatusBar = (this.context.chrome?this.context.chrome.$("FireXPathStatusBar"): $("FireXPathStatusBar"));
+		this.firePathBar = (this.context.chrome?this.context.chrome.$("FirePathBar"): $("FirePathBar"));
+		this.firePathBar.initialize();
+		this.firePathStatusBar = (this.context.chrome?this.context.chrome.$("FirePathStatusBar"): $("FirePathStatusBar"));
 		
 		this.ioBoxContainer = this.document.createElement("div");
 		setClass(this.ioBoxContainer, "io-box-container");
@@ -139,7 +139,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	
 	destroy: function(state) {
 		state.persistedLocation = this.persisteLocation();
-		this.xPathBar.persiste(state);
+		this.firePathBar.persiste(state);
 		this.stopLoading();
 		
 		if (this.ioBox) {
@@ -165,8 +165,8 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 				this.ioBox = new InsideOutBox(this, this.ioBoxContainer);
 				if(state) {
 					this.restoreLocation(state.persistedLocation);
-					this.xPathBar.restore(state);
-					this.xPathBar.evaluate(true);
+					this.firePathBar.restore(state);
+					this.firePathBar.evaluate(true);
 				} else {
 					this.ioBox.createObjectBox(this.rootElement || this.location.document);
 				}
@@ -180,8 +180,8 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	
 	showModules: function(show) {
 		try {
-			this.xPathBar.show(this.context, show);
-			this.xPathStatusBar.show(this.context, show);
+			this.firePathBar.show(this.context, show);
+			this.firePathStatusBar.show(this.context, show);
 		} catch (e) {}
 		
 		var $ = FBL.$;
@@ -197,19 +197,19 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	detach: function(oldChrome, newChrome) {
 		Firebug.Panel.detach.apply(this, arguments);
 		if(this.context == FirebugContext) {
-			this.xPathBar.persiste(this.context);
+			this.firePathBar.persiste(this.context);
 		}
-		this.xPathBar = newChrome.$("FireXPathBar");
-		this.xPathBar.initialize();
-		this.xPathStatusBar = newChrome.$("FireXPathStatusBar");
+		this.firePathBar = newChrome.$("FirePathBar");
+		this.firePathBar.initialize();
+		this.firePathStatusBar = newChrome.$("FirePathStatusBar");
 		if(this.context == FirebugContext) {
-			this.xPathBar.restore(this.context);
-			this.xPathBar.currentContext = this.context;
+			this.firePathBar.restore(this.context);
+			this.firePathBar.currentContext = this.context;
 		}
 		if(this.context.browser.detached || (newChrome != Firebug.originalChrome && this.context == FirebugContext)) {
-			Firebug.XPathPanel.LocationHighlightModule.addLocationListener(newChrome);
+			Firebug.FirePathPanel.LocationHighlightModule.addLocationListener(newChrome);
 		} else {
-			Firebug.XPathPanel.LocationHighlightModule.removeLocationListener(oldChrome);
+			Firebug.FirePathPanel.LocationHighlightModule.removeLocationListener(oldChrome);
 		}
 	},
 	
@@ -240,7 +240,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 			location = object.ownerDocument.defaultView;
 		
 		this.navigate(location);
-		this.xPathBar.setNode(object, this.inspecting);
+		this.firePathBar.setNode(object, this.inspecting);
 	},
 	
 	// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -259,8 +259,8 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	},
 	
 	updateLocation: function() {
-		this.xPathBar.updateLocation(this.location);
-		this.xPathStatusBar.reset(this.context);
+		this.firePathBar.updateLocation(this.location);
+		this.firePathStatusBar.reset(this.context);
 		this.setResult(null, null);
 	},
 	
@@ -315,7 +315,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	getOptionsMenuItems: function()
 	{
 		return [
-			getOptionMenu("showXPathContextMenu", "showXPathContext"),
+			getOptionMenu("showParentToolbar", "showParentToolbar"),
 			getOptionMenu("generateAbsoluteXPathMenu", "generateAbsoluteXPath"),
 			getOptionMenu("showDOMMenu", "showDOM")
 		];
@@ -326,8 +326,8 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 			var option = prefRegExp.exec(name)[1];
 			if(option == "showDOM") {
 				this.displayResult();
-			} else if (option == "showXPathContext") {
-				this.xPathBar.showXPathContext(value);
+			} else if (option == "showParentToolbar") {
+				this.firePathBar.showParentToolbar(value);
 			}
 		}
 	},
@@ -337,23 +337,23 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 		
 	addStyleSheet: function(doc) {
 		// Make sure the stylesheet isn't appended twice.
-		if ($("xPathStyles", doc))
+		if ($("FirePathStyles", doc))
 			return;
 
 		var styleSheet = createStyleSheet(doc,
-			"chrome://firexpath/skin/xPathPanel.css");
-		styleSheet.setAttribute("id", "xPathStyles");
+			"chrome://firepath/skin/FirePathPanel.css");
+		styleSheet.setAttribute("id", "FirePathStyles");
 		addStyleSheet(doc, styleSheet);
 	},
 	
 	// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 	// Result management methods
 	
-	setResult: function(xPathContext, result) {
-		this.rootElement = xPathContext;
+	setResult: function(parent, result) {
+		this.rootElement = parent;
 		this.evaluationResult = result;
 		this.displayResult();
-		Firebug.XPathPanel.ResultHighlightModule.refreshHighlight(this);
+		Firebug.FirePathPanel.ResultHighlightModule.refreshHighlight(this);
 	},
 	
 	displayResult: function() {
@@ -364,7 +364,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 		clearNode(this.ioBoxContainer);
 		delete this.ioBox.rootObjectBox;
 		
-		var showDOM = Firebug.getPref(Firebug.prefDomain, "xpath.showDOM")
+		var showDOM = Firebug.getPref(Firebug.prefDomain, "firepath.showDOM")
 		
 		if(this.evaluationResult != null && !this.evaluationResult.message) {
 			if(isArray(this.evaluationResult)) {
@@ -386,22 +386,22 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	setResultInfo: function() {
 		var result = this.evaluationResult;
 		if(result == null) {
-			this.xPathStatusBar.clearResultInfo(this.context);
+			this.firePathStatusBar.clearResultInfo(this.context);
 		} else if(result.message) {
-			this.xPathStatusBar.setResultInfo(this.context, "error", $STR_XP(result.message));
+			this.firePathStatusBar.setResultInfo(this.context, "error", $STR_XP(result.message));
 		} else {
 			if(FBL.isArray(result)) {
 				var whiteSpace = 0;
 				result.forEach(function(object) {if(isWhitespaceText(object)) whiteSpace++;})
 				switch(result.length) {
 					case 0:
-						this.xPathStatusBar.setResultInfo(this.context, "warning", $STR_XP("noResultError"));
+						this.firePathStatusBar.setResultInfo(this.context, "warning", $STR_XP("noResultError"));
 					break;
 					case 1:
-						this.xPathStatusBar.setResultInfo(this.context, "ok", $STR_XP("oneResultMessage"));
+						this.firePathStatusBar.setResultInfo(this.context, "ok", $STR_XP("oneResultMessage"));
 					break;
 					default:
-						this.xPathStatusBar.setResultInfo(this.context, "ok", 
+						this.firePathStatusBar.setResultInfo(this.context, "ok", 
 							$STR_XP("manyResultMessage", result.length) + 
 							(whiteSpace > 0? 
 								" (" + (whiteSpace == 1? 
@@ -414,13 +414,13 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 			} else {
 				switch(typeof(result)) {
 					case "string":
-						this.xPathStatusBar.setResultInfo(this.context, "ok", $STR_XP("stringResultMessage"));
+						this.firePathStatusBar.setResultInfo(this.context, "ok", $STR_XP("stringResultMessage"));
 					break;
 					case "number":
-						this.xPathStatusBar.setResultInfo(this.context, "ok", $STR_XP("numberResultMessage"));
+						this.firePathStatusBar.setResultInfo(this.context, "ok", $STR_XP("numberResultMessage"));
 					break;
 					case "boolean":
-						this.xPathStatusBar.setResultInfo(this.context, "ok", $STR_XP("booleanResultMessage"));
+						this.firePathStatusBar.setResultInfo(this.context, "ok", $STR_XP("booleanResultMessage"));
 					break;
 				}
 			}
@@ -478,7 +478,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 		
 		//this.panelNode.removeChild(this.ioBoxContainer);
 		
-		this.xPathStatusBar.startLoading(this.context, objects.length);
+		this.firePathStatusBar.startLoading(this.context, objects.length);
 		this.stepper.start();
 	},
 	
@@ -490,11 +490,11 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	},
 	
 	increaseLoading: function() {
-		this.xPathStatusBar.increaseLoading(this.context);
+		this.firePathStatusBar.increaseLoading(this.context);
 	},
 	
 	finishLoading: function() {
-		this.xPathStatusBar.stopLoading(this.context);
+		this.firePathStatusBar.stopLoading(this.context);
 		
 		//this.panelNode.appendChild(this.ioBoxContainer);
 		
@@ -507,7 +507,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	startInspecting: function() {
 		this.inspecting = true;
 		this.previousLocation = this.location;
-		this.previousXPath = this.xPathBar.selector;
+		this.previousSelector = this.firePathBar.selector;
 		this.setResult(null, null);
 	},
 	
@@ -515,12 +515,12 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 		this.inspecting = false;
 		if(cancelled) {
 			this.navigate(this.previousLocation);
-			this.xPathBar.selector = this.previousXPath;
+			this.firePathBar.selector = this.previousSelector;
 			delete this.previousLocation;
-			delete this.previousXPath;
+			delete this.previousSelector;
 		}
-		this.xPathBar.reset();
-		this.xPathBar.evaluate();
+		this.firePathBar.reset();
+		this.firePathBar.evaluate();
 	},
 	
 	// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -544,12 +544,12 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 // ************************************************************************************************
 // Special Reps
 
-Firebug.XPathPanel.Attr = domplate(Firebug.Rep,
+Firebug.FirePathPanel.Attr = domplate(Firebug.Rep,
 {
 	tag:
 		SPAN({"class": "nodeAttr", _repObject:"$attr"}, "&nbsp;",
 			SPAN({"class": "nodeName"}, "$attr.nodeName"), "=&quot;",
-			SPAN({"class": "nodeValue"}, "$attr.nodeValue|filterFireXPathClassValue"), "&quot;"
+			SPAN({"class": "nodeValue"}, "$attr.nodeValue|filterFirePathClassValue"), "&quot;"
 		),
 	
 	className: "attrNode",
@@ -571,7 +571,7 @@ Firebug.XPathPanel.Attr = domplate(Firebug.Rep,
 	}
 });
 
-Firebug.XPathPanel.Comment = domplate(Firebug.Rep,
+Firebug.FirePathPanel.Comment = domplate(Firebug.Rep,
 {
 	tag:
 		DIV({"class": "nodeBox", _repObject: "$object"},
@@ -595,7 +595,7 @@ Firebug.XPathPanel.Comment = domplate(Firebug.Rep,
 	}
 });
 
-Firebug.XPathPanel.CDATASection = domplate(Firebug.Rep,
+Firebug.FirePathPanel.CDATASection = domplate(Firebug.Rep,
 {
 	tag:
 		DIV({"class": "nodeBox", _repObject: "$object"},
@@ -620,14 +620,14 @@ Firebug.XPathPanel.CDATASection = domplate(Firebug.Rep,
 });
 
 Firebug.registerRep(
-	Firebug.XPathPanel.Attr,
-	Firebug.XPathPanel.Comment,
-	Firebug.XPathPanel.CDATASection
+	Firebug.FirePathPanel.Attr,
+	Firebug.FirePathPanel.Comment,
+	Firebug.FirePathPanel.CDATASection
 );
 
 // ************************************************************************************************
 // Extension of FirebugReps.Element and FirebugReps.TextNode to modify the context menu 
-// and tooltip when the xPath tab is selected
+// and tooltip when the FirePath tab is selected
 
 function overwriteMethodForPanel(object, methodName, panelName, newMethod ) {
 	if(object[methodName] && object[methodName] instanceof Function)
@@ -652,7 +652,7 @@ FirebugReps.Element.getTagName = function(node) {
 overwriteMethodForPanel(
 	FirebugReps.Element,
 	"getContextMenuItems",
-	Firebug.XPathPanel.prototype.name,
+	Firebug.FirePathPanel.prototype.name,
 	function(node, target, context) {
 		return getNodeContextMenu(node, target, context);
 	}
@@ -662,7 +662,7 @@ overwriteMethodForPanel(
 overwriteMethodForPanel(
 	FirebugReps.Element,
 	"getTooltip",
-	Firebug.XPathPanel.prototype.name,
+	Firebug.FirePathPanel.prototype.name,
 	function(node) {
 		return getXPathFromNode(node);
 	}
@@ -672,7 +672,7 @@ overwriteMethodForPanel(
 overwriteMethodForPanel(
 	FirebugReps.TextNode,
 	"getContextMenuItems",
-	Firebug.XPathPanel.prototype.name,
+	Firebug.FirePathPanel.prototype.name,
 	function(node, target, context) {
 		return getNodeContextMenu(node, target, context);
 	}
@@ -682,7 +682,7 @@ overwriteMethodForPanel(
 overwriteMethodForPanel(
 	FirebugReps.TextNode,
 	"getTooltip",
-	Firebug.XPathPanel.prototype.name,
+	Firebug.FirePathPanel.prototype.name,
 	function(node) {
 		return getXPathFromNode(node);
 	}
@@ -692,7 +692,7 @@ overwriteMethodForPanel(
 overwriteMethodForPanel(
 	FirebugReps.TextNode,
 	"getRealObject",
-	Firebug.XPathPanel.prototype.name,
+	Firebug.FirePathPanel.prototype.name,
 	function(object) {
 		return object.parentNode;
 	}
@@ -702,7 +702,7 @@ overwriteMethodForPanel(
 // Tree definition
 
 //TODO improve this (add the url, ns...)
-Firebug.XPathPanel.Document = domplate(FirebugReps.Document,
+Firebug.FirePathPanel.Document = domplate(FirebugReps.Document,
 {
 	tag:
 		DIV({"class": "nodeBox containerNodeBox repIgnore", _repObject: "$object"},
@@ -725,7 +725,7 @@ Firebug.XPathPanel.Document = domplate(FirebugReps.Document,
 		)
 });
 
-Firebug.XPathPanel.Element = domplate(FirebugReps.Element,
+Firebug.FirePathPanel.Element = domplate(FirebugReps.Element,
 {
 	tag:
 		DIV({"class": "nodeBox containerNodeBox repIgnore", _repObject: "$object"},
@@ -734,7 +734,7 @@ Firebug.XPathPanel.Element = domplate(FirebugReps.Element,
 				SPAN({"class": "nodeLabelBox repTarget"},
 					"&lt;",
 					SPAN({"class": "nodeTag"}, "$object|getTagName"),
-					FOR("attr", "$object|attrIterator|filterFireXPathClass", Firebug.XPathPanel.Attr.tag),
+					FOR("attr", "$object|attrIterator|filterFirePathClass", Firebug.FirePathPanel.Attr.tag),
 					SPAN({"class": "nodeBracket insertBefore"}, "&gt;")
 				)
 			),
@@ -747,15 +747,15 @@ Firebug.XPathPanel.Element = domplate(FirebugReps.Element,
 				)
 			 )
 		),
-	filterFireXPathClassValue: 
+	filterFirePathClassValue: 
 		function(value) {
-			return value.replace(" firexpath-matching-node", "");
+			return value.replace(" firepath-matching-node", "");
 		},
-	filterFireXPathClass:
+	filterFirePathClass:
 		function(attrs) {
 			for (var i=0; i<attrs.length; i++) {
 				var attr = attrs[i];
-				if(attr.localName == "class" && attr.nodeValue == "firexpath-matching-node") {
+				if(attr.localName == "class" && attr.nodeValue == "firepath-matching-node") {
 					attrs.splice(i, 1);
 					break;
 				}
@@ -764,7 +764,7 @@ Firebug.XPathPanel.Element = domplate(FirebugReps.Element,
 		}
 });
 
-Firebug.XPathPanel.TextElement = domplate(Firebug.XPathPanel.Element,
+Firebug.FirePathPanel.TextElement = domplate(Firebug.FirePathPanel.Element,
 {
 	tag:
 		DIV({"class": "nodeBox textNodeBox repIgnore", _repObject: "$object"},
@@ -772,7 +772,7 @@ Firebug.XPathPanel.TextElement = domplate(Firebug.XPathPanel.Element,
 				SPAN({"class": "nodeLabelBox repTarget"},
 					"&lt;",
 					SPAN({"class": "nodeTag"}, "$object|getTagName"),
-					FOR("attr", "$object|attrIterator|filterFireXPathClass", Firebug.XPathPanel.Attr.tag),
+					FOR("attr", "$object|attrIterator|filterFirePathClass", Firebug.FirePathPanel.Attr.tag),
 					SPAN({"class": "nodeBracket insertBefore"}, "&gt;"),
 					SPAN({"class": "nodeText", _repObject: "$object.firstChild"}, "$object.firstChild.nodeValue|escapeWhitespace"),
 					"&lt;/",
@@ -786,7 +786,7 @@ Firebug.XPathPanel.TextElement = domplate(Firebug.XPathPanel.Element,
 	}
 });
 
-Firebug.XPathPanel.EmptyElement = domplate(Firebug.XPathPanel.Element,
+Firebug.FirePathPanel.EmptyElement = domplate(Firebug.FirePathPanel.Element,
 {
 	tag:
 		DIV({"class": "nodeBox emptyNodeBox repIgnore", _repObject: "$object"},
@@ -794,14 +794,14 @@ Firebug.XPathPanel.EmptyElement = domplate(Firebug.XPathPanel.Element,
 				SPAN({"class": "nodeLabelBox repTarget"},
 					"&lt;",
 					SPAN({"class": "nodeTag"}, "$object|getTagName"),
-					FOR("attr", "$object|attrIterator|filterFireXPathClass", Firebug.XPathPanel.Attr.tag),
+					FOR("attr", "$object|attrIterator|filterFirePathClass", Firebug.FirePathPanel.Attr.tag),
 					SPAN({"class": "nodeBracket insertBefore"}, "/&gt;")
 				)
 			)
 		)
 });
 
-Firebug.XPathPanel.TextNode = domplate(Firebug.XPathPanel.TextElement,
+Firebug.FirePathPanel.TextNode = domplate(Firebug.FirePathPanel.TextElement,
 {
 	tag:
 		DIV({"class": "nodeBox", _repObject: "$object"},
@@ -815,24 +815,24 @@ Firebug.XPathPanel.TextNode = domplate(Firebug.XPathPanel.TextElement,
 function getNodeTag(node) {
 	if (node instanceof Element) {
 		if (node instanceof HTMLAppletElement)
-			return Firebug.XPathPanel.EmptyElement.tag;
+			return Firebug.FirePathPanel.EmptyElement.tag;
 		else if (node.firebugIgnore || node.id == "_firebugConsole" || node.className == "firebugHighlight")
 			return null;
 		else if (isEmptyElement(node))
-			return Firebug.XPathPanel.EmptyElement.tag;
+			return Firebug.FirePathPanel.EmptyElement.tag;
 		else if (isPureText(node))
-			return Firebug.XPathPanel.TextElement.tag;
+			return Firebug.FirePathPanel.TextElement.tag;
 		else
-			return Firebug.XPathPanel.Element.tag;
+			return Firebug.FirePathPanel.Element.tag;
 	}
 	else if(node instanceof Document)
-		return Firebug.XPathPanel.Document.tag;
+		return Firebug.FirePathPanel.Document.tag;
 	else if (node instanceof Text)
-		return Firebug.XPathPanel.TextNode.tag;
+		return Firebug.FirePathPanel.TextNode.tag;
 	else if (node instanceof CDATASection)
-		return Firebug.XPathPanel.CDATASection.tag;
+		return Firebug.FirePathPanel.CDATASection.tag;
 	else if (node instanceof Comment)
-		return Firebug.XPathPanel.Comment.tag;
+		return Firebug.FirePathPanel.Comment.tag;
 	else
 		return FirebugReps.Nada.tag;
 }
@@ -867,7 +867,7 @@ function isEmptyElement(element) {
 }
 
 function getOptionMenu(label, option) {
-	var key = Firebug.XPathPanel.prototype.name + "." + option;
+	var key = Firebug.FirePathPanel.prototype.name + "." + option;
 	var value = Firebug.getPref(Firebug.prefDomain, key);
 	
 	return {label: $STR_XP(label),
@@ -882,7 +882,7 @@ function getNodeContextMenu(node, target, context) {
 	// This to make sure the context menu is added to the right object
 	if(node != Firebug.getRepObject(target)) return;
 	
-	var xPathBar = context.getPanel(panelName).xPathBar;
+	var firePathBar = context.getPanel(panelName).firePathBar;
 	
 	var contextMenu = [
 		{label: $STR_XP("copy", $STR_XP("xpathSelector")),
@@ -893,8 +893,8 @@ function getNodeContextMenu(node, target, context) {
 		command: bindFixed(copyCssSelector, FBL, node)}
 	];
 	
-	if(Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext")) {
-		var panel = context.getPanel(Firebug.XPathPanel.prototype.name);
+	if(Firebug.getPref(Firebug.prefDomain, "firepath.showParentToolbar")) {
+		var panel = context.getPanel(Firebug.FirePathPanel.prototype.name);
 		if(panel.rootElement && panel.rootElement != panel.location.document) {
 			contextMenu.push(
 				{label: $STR_XP("copyFromContext", $STR_XP("xpathSelector")),
@@ -910,19 +910,19 @@ function getNodeContextMenu(node, target, context) {
 	}
 	
 	contextMenu.push(
-		{label: $STR_XP("setSelector", $STR_XP(xPathBar.evaluationMode + 'Selector')),
+		{label: $STR_XP("setSelector", $STR_XP(firePathBar.evaluationMode + 'Selector')),
 			nol10n: true,
-			command: bindFixed(xPathBar.setNode, xPathBar, node)}
+			command: bindFixed(firePathBar.setNode, firePathBar, node)}
 	)
 		
 	var element = null;
 	if(node instanceof Element) {
 		element = node;
-		if(Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext"))
+		if(Firebug.getPref(Firebug.prefDomain, "firepath.showParentToolbar"))
 			contextMenu.push(
 				{label: $STR_XP("setContext"),
 					nol10n: true,
-					command: bindFixed(xPathBar.setContextNode, xPathBar, node)}
+					command: bindFixed(firePathBar.setContextNode, firePathBar, node)}
 			);
 	}
 	else if(node instanceof Attr)
@@ -965,7 +965,7 @@ function escapeWhitespace(value) {
 FBL.$STR_XP = function() {
 	var args = cloneArray(arguments);
 	var key = args.shift();
-	var bundle = document.getElementById("FireXpath_strings");
+	var bundle = document.getElementById("Firepath_strings");
 	try{
 		if(args.length > 0)
 			return bundle.getFormattedString(key, args);
@@ -1006,7 +1006,7 @@ FBL.getPrefixFromNS = function(ns) {
 FBL.getXPathFromNode = function(node, context) {
 	var result = "";
 	var stop = false;
-	var absolute = Firebug.getPref(Firebug.prefDomain, "xpath.generateAbsoluteXPath");
+	var absolute = Firebug.getPref(Firebug.prefDomain, "firepath.generateAbsoluteXPath");
 
 	var parent = context || node.ownerDocument;
 	while (node && node != parent && !stop) {
@@ -1206,7 +1206,7 @@ InsideOutBox.prototype = extend(InsideOutBox.prototype, {
 // ************************************************************************************************
 // Auto Completion
 	
-Firebug.XPathPanel.xPathAutoCompleter = function(evaluator) {
+Firebug.FirePathPanel.xPathAutoCompleter = function(evaluator) {
 	this.autoCompleter = new Firebug.AutoCompleter(
 			null,
 			bind(this.getAutoCompleteRange, this),
@@ -1216,7 +1216,7 @@ Firebug.XPathPanel.xPathAutoCompleter = function(evaluator) {
 	this.evaluator = evaluator;
 }
 
-Firebug.XPathPanel.xPathAutoCompleter.prototype = {
+Firebug.FirePathPanel.xPathAutoCompleter.prototype = {
 	
 	reset: function() {
 		this.autoCompleter.reset();
@@ -1640,7 +1640,7 @@ Stepper.prototype = {
 // ************************************************************************************************
 // location highlighting module
 
-Firebug.XPathPanel.LocationHighlightModule = extend(Firebug.Module,
+Firebug.FirePathPanel.LocationHighlightModule = extend(Firebug.Module,
 {
 	// add event listener
 	initializeUI: function(detachArgs) {
@@ -1680,7 +1680,7 @@ Firebug.XPathPanel.LocationHighlightModule = extend(Firebug.Module,
 // ************************************************************************************************
 // result highlighting module
 
-Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
+Firebug.FirePathPanel.ResultHighlightModule = extend(Firebug.Module,
 {
 	initialize: function() {
 		this.highlighted = false;
@@ -1688,21 +1688,21 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 	},
 	
 	destroyContext: function(context, persistedState) {
-		persistedState.persistedXPathResultNotHighlighted = !!context.xPathResultNotHighlighted;
+		persistedState.persistedFirePathResultNotHighlighted = !!context.firePathResultNotHighlighted;
 		this.clear();
 	},
 	
 	loadedContext: function(context) {
 		if(context.persistedState)
-			context.xPathResultNotHighlighted = context.persistedState.persistedXPathResultNotHighlighted 
+			context.firePathResultNotHighlighted = context.persistedState.persistedFirePathResultNotHighlighted 
 	},
 	
 	reattachContext: function(browser, context) {
-		this.highlightButton = browser.chrome.$("FireXPathBarHighlightButton");
+		this.highlightButton = browser.chrome.$("FirePathBarHighlightButton");
 	},
 	
 	showContext: function(browser, context) {
-		this.highlightButton = browser.chrome.$("FireXPathBarHighlightButton");
+		this.highlightButton = browser.chrome.$("FirePathBarHighlightButton");
 		this.refreshHighlightButton(context.getPanel(panelName));
 	},
 	
@@ -1713,7 +1713,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 	showPanel: function(browser, panel) {
 		if(panel.name == panelName) {
 			this.highlightButton.collapsed = false;
-			if(!panel.context.xPathResultNotHighlighted)
+			if(!panel.context.firePathResultNotHighlighted)
 				this.highlight(panel.context);
 		} else {
 			this.highlightButton.collapsed = true;
@@ -1725,7 +1725,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 		if(panel.evaluationResult != null && isArray(panel.evaluationResult) &&
 			panel.evaluationResult.some(function(e) {return e.nodeType == 1 && (e.namespaceURI == null || e.namespaceURI == xhtmlNS)})) 
 		{
-			this.highlightButton.setAttribute("checked", !panel.context.xPathResultNotHighlighted);
+			this.highlightButton.setAttribute("checked", !panel.context.firePathResultNotHighlighted);
 			this.highlightButton.setAttribute("disabled", false);
 		} else {
 			this.highlightButton.setAttribute("checked", false);
@@ -1736,20 +1736,20 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 	// call when the result has changed
 	refreshHighlight: function(panel) {
 		this.refreshHighlightButton(panel);
-		if(!panel.context.xPathResultNotHighlighted) {
+		if(!panel.context.firePathResultNotHighlighted) {
 			this.clear();
 			this.highlight(panel.context);
 		}
 	},
 	
 	toggleHighlight: function(context) {
-		if(!context.xPathResultNotHighlighted) {
+		if(!context.firePathResultNotHighlighted) {
 			this.clear();
 		} else {
 			this.highlight(context);
 		}
-		context.xPathResultNotHighlighted = !context.xPathResultNotHighlighted
-		this.highlightButton.setAttribute("checked", !context.xPathResultNotHighlighted);
+		context.firePathResultNotHighlighted = !context.firePathResultNotHighlighted
+		this.highlightButton.setAttribute("checked", !context.firePathResultNotHighlighted);
 	},
 	
 	highlight: function(context) {
@@ -1757,23 +1757,23 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 		var doc = panel.location.document;
 		var resultElement = panel.evaluationResult;
 		
-		var isCSSAttached = doc.getElementById("firexpath-matching-node-style");
+		var isCSSAttached = doc.getElementById("firepath-matching-node-style");
 		
 		if(!isCSSAttached) {
 			var head = doc.getElementsByTagName("head")[0]
 			if(head) {
-				if(!context.fireXPathStyleSheet) {
+				if(!context.firePathStyleSheet) {
 					var styleSheet = document.createElementNS(xhtmlNS, "style");
 					styleSheet.firebugIgnore = true;
 					styleSheet.setAttribute("type", "text/css");
-					styleSheet.setAttribute("id", "firexpath-matching-node-style");
+					styleSheet.setAttribute("id", "firepath-matching-node-style");
 					styleSheet.innerHTML = 
-					".firexpath-matching-node {" +
+					".firepath-matching-node {" +
 					"	outline: 2px dashed #00F;" +
 					"}";
-					context.fireXPathStyleSheet = styleSheet;
+					context.firePathStyleSheet = styleSheet;
 				}
-				head.appendChild(context.fireXPathStyleSheet);
+				head.appendChild(context.firePathStyleSheet);
 			} else {
 				// if we can't attach the stylesheet there is no need to highlighting the result
 				// for instance in XML documents
@@ -1783,7 +1783,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 		
 		var step = bind(function(element) {
 			if(element.nodeType == 1 && isVisible(element)) {
-				setClass(element, "firexpath-matching-node");
+				setClass(element, "firepath-matching-node");
 				this.highlightedElement.push(element);
 			}
 		}, this);
@@ -1796,9 +1796,9 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 	},
 	
 	clear: function(doc) {
-		// clear the stylesheet from the doc before evaluating an XPath expression
+		// clear the stylesheet from the doc before evaluating an expression
 		if(doc) {
-			var styleSheet = doc.getElementById("firexpath-matching-node-style");
+			var styleSheet = doc.getElementById("firepath-matching-node-style");
 			if(styleSheet) {
 				styleSheet.parentNode.removeChild(styleSheet);
 			}
@@ -1810,7 +1810,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 		}
 		var element;
 		while(element = this.highlightedElement.pop()) {
-			removeClass(element, "firexpath-matching-node");
+			removeClass(element, "firepath-matching-node");
 			if (element.className === '' || (element.className && element.className.trim().length === 0)) {
 				element.removeAttribute("class");
 			}
@@ -1819,7 +1819,7 @@ Firebug.XPathPanel.ResultHighlightModule = extend(Firebug.Module,
 })
 
 // ************************************************************************************************
-// Overwrite inspector to make sure it stay on the XPath tab (instead of going to the HTML tab)
+// Overwrite inspector to make sure it stay on the FirePath tab (instead of going to the HTML tab)
 
 overwriteMethodForPanel(
 	Firebug.Inspector, 
@@ -1846,7 +1846,7 @@ overwriteMethodForPanel(
 			panel = context.chrome.selectPanel("html");
 			this.previousObject = panel.selection;
 		} else {
-			panel = context.getPanel("xpath");
+			panel = context.getPanel(panelName);
 		}
 
 		if (context.detached)
@@ -1886,7 +1886,7 @@ overwriteMethodForPanel(
 		this.inspecting = false;
 		
 		var htmlPanel = context.getPanel("html");
-		var xPathPanel = context.getPanel("xpath");
+		var firePathPanel = context.getPanel(panelName);
 		
 		if (this.previouslyFocused) 
 			context.chrome.focus();
@@ -1910,7 +1910,7 @@ overwriteMethodForPanel(
 		if(this.previouslyCollapsed)
 			htmlPanel.stopInspecting(htmlPanel.selection, cancelled);
 		else
-			xPathPanel.stopInspecting(cancelled);
+			firePathPanel.stopInspecting(cancelled);
 		
 		this.inspectNode(null);
 		
@@ -1921,7 +1921,7 @@ overwriteMethodForPanel(
 	}
 );
 
-Firebug.registerPanel(Firebug.XPathPanel);
-Firebug.registerModule(Firebug.XPathPanel.LocationHighlightModule, Firebug.XPathPanel.ResultHighlightModule);
-if(Firebug.registerUIListener) Firebug.registerUIListener(Firebug.XPathPanel.ResultHighlightModule);
+Firebug.registerPanel(Firebug.FirePathPanel);
+Firebug.registerModule(Firebug.FirePathPanel.LocationHighlightModule, Firebug.FirePathPanel.ResultHighlightModule);
+if(Firebug.registerUIListener) Firebug.registerUIListener(Firebug.FirePathPanel.ResultHighlightModule);
 }});

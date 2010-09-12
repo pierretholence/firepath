@@ -1,19 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- ====================================================================== 
-	 5 mai 2009 16:19:23														
-
-	 FireXPath	
-	 Firebug extension to generate, edit and inspect XPath expressions
-				   
-	 Pierre Tholence																
-	 ====================================================================== -->
-<project name="FireXPath" default="xpi">
-	<description>
-		Firebug extension to generate, edit and inspect XPath expressions
-	</description>
+<project name="FirePath" default="xpi">
 	
 
-	<property name="filename" value="FireXPath.xpi"/>
+	<property name="filename" value="FirePath.xpi"/>
 	<property name="builddir" value="build"/>
 	<property name="tempdir" value="temp"/>
 
@@ -25,6 +14,7 @@
 		<copy todir="${tempdir}">
 			<fileset dir="." >
 				<exclude name="${tempdir}"/>
+				<exclude name="logo/**"/>
 				<exclude name="build.xml"/>
 				<exclude name=".project"/>
 				<exclude name="**/.svn"/>
@@ -36,7 +26,7 @@
 	</target>
 
 	<!-- - - - - - - - - - - - - - - - - - 
-		  target: copyFiles					  
+		  target: clean					  
 		 - - - - - - - - - - - - - - - - - -->
 	<target name="clean">
 		<delete dir="${builddir}"/>
