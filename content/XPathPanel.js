@@ -507,7 +507,7 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 	startInspecting: function() {
 		this.inspecting = true;
 		this.previousLocation = this.location;
-		this.previousXPath = this.xPathBar.xPath;
+		this.previousXPath = this.xPathBar.selector;
 		this.setResult(null, null);
 	},
 	
@@ -515,10 +515,11 @@ Firebug.XPathPanel.prototype = extend(Firebug.Panel,
 		this.inspecting = false;
 		if(cancelled) {
 			this.navigate(this.previousLocation);
-			this.xPathBar.xPath = this.previousXPath;
+			this.xPathBar.selector = this.previousXPath;
 			delete this.previousLocation;
 			delete this.previousXPath;
 		}
+		this.xPathBar.reset();
 		this.xPathBar.evaluate();
 	},
 	
@@ -815,7 +816,7 @@ function getNodeTag(node) {
 	if (node instanceof Element) {
 		if (node instanceof HTMLAppletElement)
 			return Firebug.XPathPanel.EmptyElement.tag;
-		else if (node.firebugIgnore || node.id == "_firebugConsole")
+		else if (node.firebugIgnore || node.id == "_firebugConsole" || node.className == "firebugHighlight")
 			return null;
 		else if (isEmptyElement(node))
 			return Firebug.XPathPanel.EmptyElement.tag;
@@ -884,23 +885,32 @@ function getNodeContextMenu(node, target, context) {
 	var xPathBar = context.getPanel(panelName).xPathBar;
 	
 	var contextMenu = [
-		{label: $STR_XP("copyXPath"),
+		{label: $STR_XP("copy", $STR_XP("xpathSelector")),
 		nol10n: true,
-		command: bindFixed(copyXPath, FBL, node)}
+		command: bindFixed(copyXPath, FBL, node)},
+		{label: $STR_XP("copy", $STR_XP("cssSelector")),
+		nol10n: true,
+		command: bindFixed(copyCssSelector, FBL, node)}
 	];
 	
 	if(Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext")) {
 		var panel = context.getPanel(Firebug.XPathPanel.prototype.name);
-		if(panel.rootElement && panel.rootElement != panel.location.document)
+		if(panel.rootElement && panel.rootElement != panel.location.document) {
 			contextMenu.push(
-				{label: $STR_XP("copyXPathFromContext"),
+				{label: $STR_XP("copyFromContext", $STR_XP("xpathSelector")),
 				nol10n: true,
 				command: bindFixed(copyXPath, FBL, node, panel.rootElement) }
-			)
+			);
+			contextMenu.push(
+				{label: $STR_XP("copyFromContext", $STR_XP("cssSelector")),
+				nol10n: true,
+				command: bindFixed(copyCssSelector, FBL, node, panel.rootElement) }
+			);
+		}
 	}
 	
 	contextMenu.push(
-		{label: $STR_XP("setXPath"),
+		{label: $STR_XP("setSelector", $STR_XP(xPathBar.evaluationMode + 'Selector')),
 			nol10n: true,
 			command: bindFixed(xPathBar.setNode, xPathBar, node)}
 	)
@@ -910,7 +920,7 @@ function getNodeContextMenu(node, target, context) {
 		element = node;
 		if(Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext"))
 			contextMenu.push(
-				{label: $STR_XP("setXPathContext"),
+				{label: $STR_XP("setContext"),
 					nol10n: true,
 					command: bindFixed(xPathBar.setContextNode, xPathBar, node)}
 			);
@@ -931,6 +941,11 @@ function getNodeContextMenu(node, target, context) {
 function copyXPath(node, context) {
 	var xpath = getXPathFromNode(node, context);
 	copyToClipboard(xpath);
+}
+
+function copyCssSelector(node, context) {
+	var cssSelector = getCssSelectorFromNode(node, context);
+	copyToClipboard(cssSelector);
 }
 
 // Generator that create an iterator over an array
@@ -1031,6 +1046,39 @@ FBL.getXPathFromNode = function(node, context) {
 
 	}
 
+	return result;
+}
+
+FBL.getCssSelectorFromNode = function (node, context) {
+	var result = '',
+		node,
+		parent = context || node.ownerDocument,
+		stop = false,
+		str;
+	
+	while (node && node != parent && !stop) {
+		if(node.nodeType === Node.ELEMENT_NODE) {
+			if(node.id) {
+				str = '#' + node.id;
+				stop = true;
+			} else if(node.className) {
+				str = '.' + node.className.trim()
+					.replace(/\s+/g, '').split(' ').join('.');
+				stop = true;
+			} else {
+				str = node.localName.toLowerCase();
+			}
+		}
+		
+		result = str + (result? '>' + result: ''); 
+		
+		if(node instanceof Attr) {
+			node = node.ownerElement;
+		} else {
+			node = node.parentNode;
+		}
+	}
+	
 	return result;
 }
 

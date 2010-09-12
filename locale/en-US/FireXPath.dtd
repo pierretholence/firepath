@@ -5,3 +5,5 @@
 <!ENTITY FireXPath.context.key "t">
 <!ENTITY FireXPath.highlight.button "Highlight">
 <!ENTITY FireXPath.eval.button "Eval">
+<!ENTITY FireXPath.CSS.label "CSS: ">
+<!ENTITY FireXPath.CSS.key "c">

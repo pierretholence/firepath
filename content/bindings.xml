@@ -46,10 +46,14 @@
 			
 			<method name="checkSyntax">
 				<body><![CDATA[
-					if(this.value != "" && this.xPathBar.getXPathExpression(this.value) == null)
-						this.setStatus("error", FBL.$STR_XP("invaliXPathError"));
-					else
+					if (this.value === "" || this.xPathBar.isValidSelector(this.value)) {
 						this.setStatus();
+					} else {
+						var errorMessage = this.xPathBar.evaluationMode === 'xpath'?
+							FBL.$STR_XP("invalidXPathError"):
+							FBL.$STR_XP("invalidCSSSelectorError");
+						this.setStatus("error", errorMessage);
+					}
 				]]></body>
 			</method>
 			
@@ -90,17 +94,22 @@
 		<content>
 			<xul:toolbarseparator/>
 			<xul:toolbaritem align="center" flex="6">
-				<xul:label value="&FireXPath.xPath.label;" control="xPathBar-xpath-textbox" accesskey="&FireXPath.xPath.key;"/>
+				<xul:toolbarbutton anonid="mode-selector-button" accesskey="&FireXPath.xPath.key;" type="menu" oncommand="document.getBindingParent(this).changeMode(event)">
+					<xul:menupopup>
+						<xul:menuitem mode="xpath" label="&FireXPath.xPath.label;" accesskey="&FireXPath.xPath.key;" />
+						<xul:menuitem mode="css" label="&FireXPath.CSS.label;" accesskey="&FireXPath.CSS.key;"/>
+					</xul:menupopup>
+				</xul:toolbarbutton>
 				<xul:hbox class="xpath-field-container" flex="1">
 					<xul:textbox anonid="xpath-textbox" id="xPathBar-xpath-textbox" class="xpath-textbox" minwidth="100" flex="1"/>
 				</xul:hbox>
 			</xul:toolbaritem>
 			<xul:toolbaritem anonid="xpath-context-toolbar" align="center" flex="1">
-				<xul:label value="&FireXPath.context.label;" control="xPathBar-xpath-context-textbox" accesskey="&FireXPath.context.key;"/>
+				<xul:label value="&FireXPath.context.label;" control="xPathBar-parent-textbox" accesskey="&FireXPath.context.key;"/>
 				<xul:hbox class="xpath-field-container" flex="1">
-					<xul:textbox anonid="xpath-context-textbox" id="xPathBar-xpath-context-textbox" class="xpath-textbox" flex="1"/>
+					<xul:textbox anonid="parent-textbox" id="xPathBar-parent-textbox" class="xpath-textbox" flex="1"/>
 				</xul:hbox>
-				<xul:textbox anonid="xpath-context-node-number-textbox"
+				<xul:textbox anonid="parent-node-number-textbox"
 					type="number"
 					size="1"
 					min="1"
@@ -118,27 +127,36 @@
 			-->
 			
 			<field name="NSResolver">null</field>
-			<field name="xPathContextNodes">null</field>
-			<field name="lastXPath">null</field>
-			<field name="lastContext">null</field>
-			<field name="lastXPathContext">null</field>
+			<field name="parentNodes">null</field>
+			<field name="lastSelector">null</field>
+			<field name="lastParent">null</field>
+			<field name="lastParentSelector">null</field>
 			<field name="_evaluator">null</field>
 			
 			<property name="autoCompleter" readonly="true">
 				<getter><![CDATA[
-					return this._autoCompleter ?
-					this._autoCompleter : this._autoCompleter = new Firebug.XPathPanel.xPathAutoCompleter(this);
+					if(this.evaluationMode === 'css'){
+						return {
+							complete: function(){
+								return [];
+							},
+							reset: function(){}
+						};
+					} else {
+						return this._autoCompleter ?
+						this._autoCompleter : this._autoCompleter = new Firebug.XPathPanel.xPathAutoCompleter(this);
+					}
 				]]></getter>
 			</property>
 			
-			<property name="evaluator" readonly="true">
+			<property name="xPathEvaluator" readonly="true">
 				<getter><![CDATA[
 					return this._evaluator ?
 					this._evaluator : this._evaluator = new XPathEvaluator();
 				]]></getter>
 			</property>
 			
-			<property name="xPath">
+			<property name="selector">
 				<getter><![CDATA[
 					return this.getElement("xpath-textbox").value;
 				]]></getter>
@@ -148,26 +166,26 @@
 				]]></setter>
 			</property>
 			
-			<property name="xPathContext">
+			<property name="parentSelector">
 				<getter><![CDATA[
-					var textbox = this.getElement("xpath-context-textbox");
-					if(textbox.value == "")
+					var textbox = this.getElement("parent-textbox");
+					if(this.evaluationMode === 'xpath' && textbox.value == "")
 						textbox.value = "/";
 					return textbox.value;
 				]]></getter>
 				<setter><![CDATA[
-					this.getElement("xpath-context-textbox").setValue(val);
+					this.getElement("parent-textbox").setValue(val);
 					return val;
 				]]></setter>
 			</property>
 			
-			<property name="xPathContextNodeNumber" readonly="true">
+			<property name="parentNodeNumber" readonly="true">
 				<getter><![CDATA[
-					return this.getElement("xpath-context-node-number-textbox");
+					return this.getElement("parent-node-number-textbox");
 				]]></getter>
 			</property>
 			
-			<property name="xPathContextToolbar" readonly="true">
+			<property name="parentToolbar" readonly="true">
 				<getter><![CDATA[
 					return this.getElement("xpath-context-toolbar");
 				]]></getter>
@@ -179,9 +197,16 @@
 				]]></getter>
 			</property>
 			
-			<property name="xPathPanel" readonly="true">
+			<property name="FirePathPanel" readonly="true">
 				<getter><![CDATA[	
 					return FirebugContext.getPanel(Firebug.XPathPanel.prototype.name);
+				]]></getter>
+			</property>
+			
+			<property name="selectorGenerator" readonly="true">
+				<getter><![CDATA[	
+					return this.evaluationMode === 'xpath'? 
+							FBL.getXPathFromNode: FBL.getCssSelectorFromNode;
 				]]></getter>
 			</property>
 			
@@ -200,7 +225,8 @@
 			<method name="initialize">
 				<body><![CDATA[
 					if(Firebug) {
-						this.xPathContextToolbar.collapsed = !Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext");
+						this.parentToolbar.collapsed = !Firebug.getPref(Firebug.prefDomain, "xpath.showXPathContext");
+						this.setEvaluationMode();
 					}
 				]]></body>
 			</method>
@@ -209,12 +235,12 @@
 				<parameter name="context"/>
 				<body><![CDATA[
 					this.NSResolver = this.createNSResolver(context.window.document);
-					this.xPath = "";
-					this.xPathContext = "/";
-					this.xPathContextNodeNumber.collapsed = true;
-					this.xPathContextNodes = null;
-					this.lastXPath = "";
-					this.lastContext = null;
+					this.selector = "";
+					this.parentSelector = this.evalutationMode === 'xpath'? "/": "";
+					this.parentNodeNumber.collapsed = true;
+					this.parentNodes = null;
+					this.lastSelecor = "";
+					this.lastParent = null;
 					context.xPathBarInit = true;
 				]]></body>
 			</method>
@@ -262,16 +288,16 @@
 				<parameter name="from"/>
 				<parameter name="to"/>
 				<body><![CDATA[
-					to.xPath = from.xPath;
-					to.xPathContext = from.xPathContext;
-					if(!to.xPathContextNodeNumber) to.xPathContextNodeNumber = {};
-					to.xPathContextNodeNumber.value = from.xPathContextNodeNumber.value;
-					to.xPathContextNodeNumber.max = from.xPathContextNodeNumber.max;
-					to.xPathContextNodeNumber.collapsed = from.xPathContextNodeNumber.collapsed;
-					to.xPathContextNodes = from.xPathContextNodes;
+					to.selector = from.selector;
+					to.parentSelector = from.parentSelector;
+					if(!to.parentNodeNumber) to.parentNodeNumber = {};
+					to.parentNodeNumber.value = from.parentNodeNumber.value;
+					to.parentNodeNumber.max = from.parentNodeNumber.max;
+					to.parentNodeNumber.collapsed = from.parentNodeNumber.collapsed;
+					to.parentNodes = from.parentNodes;
 					to.NSResolver = from.NSResolver;
 					to.lastXPath = from.lastXPath;
-					to.lastContext = from.lastContext;
+					to.lastParent = from.lastParent;
 				]]></body>
 			</method>
 			
@@ -282,32 +308,32 @@
 			<method name="evaluate">
 				<parameter name="reevaluate"/>
 				<body><![CDATA[
-					var xPath = this.xPath;
+					var selector = this.selector;
 					if(reevaluate)
-						xPath = this.lastXPath;
+						selector = this.lastSelecor;
 					
 					var context = this.getContextNode(reevaluate);
-					if(xPath != "") {
+					if(selector != "") {
 						
-						if(!reevaluate && this.lastXPath == xPath && this.lastContext == context)
+						if(!reevaluate && this.lastSelecor == selector && this.lastParent == context)
 							return;
 							
-						var contextTextbox = this.getElement("xpath-context-textbox");
+						var contextTextbox = this.getElement("parent-textbox");
 						if(context) {
 							contextTextbox.setStatus();
-							if(FBL.trimLeft(this.xPath).indexOf("/") == 0 && FBL.trimLeft(this.xPathContext) != "/") {
+							if(this.evaluationMode === 'xpath' && FBL.trimLeft(this.selector).indexOf("/") == 0 && FBL.trimLeft(this.parentSelector) != "/") {
 								context = null;
 								contextTextbox.setStatus("warning", FBL.$STR_XP("unusedParentNode"));
 							}
 						}
 						
-						var result = this._evaluateExpression(this.xPath, context);
-						this.lastXPath = this.xPath;
-						this.lastContext = context;
-						this.xPathPanel.setResult(context, result);
+						var result = this._evaluateExpression(this.selector, context);
+						this.lastSelecor = this.selector;
+						this.lastParent = context;
+						this.FirePathPanel.setResult(context, result);
 					} else {
-						this.lastXPath = "";
-						this.xPathPanel.setResult(context, null);
+						this.lastSelecor = "";
+						this.FirePathPanel.setResult(context, null);
 					}
 				]]></body>
 			</method>
@@ -316,7 +342,7 @@
 				<parameter name="xPath"/>
 				<body><![CDATA[
 					try {
-						return this.evaluator.createExpression(xPath, this.NSResolver);
+						return this.xPathEvaluator.createExpression(xPath, this.NSResolver);
 					} catch (e) {
 						return null;
 					}
@@ -324,20 +350,38 @@
 			</method>
 			
 			<method name="_evaluateExpression">
-				<parameter name="xPath"/>
+				<parameter name="selector"/>
 				<parameter name="contextNode"/>
 				<body><![CDATA[
-					Firebug.XPathPanel.ResultHighlightModule.clear(this.xPathPanel.location.document);
-					var xPathExpression = this.getXPathExpression(xPath);
-					if(!xPathExpression) return new Error("invaliXPathError");
+					Firebug.XPathPanel.ResultHighlightModule.clear(this.FirePathPanel.location.document);
 					
-					var result;
-					try{
-						result = xPathExpression.evaluate(contextNode || this.xPathPanel.location.document, XPathResult.ANY_TYPE, null);
-					} catch(e) {
-						return new Error("invaliXPathError");
+					if(this.evaluationMode === 'xpath') {
+						var xPathExpression = this.getXPathExpression(selector);
+						if(!xPathExpression) return new Error("invalidXPathError");
+						try {
+							return this.processResult(xPathExpression.evaluate(contextNode || this.FirePathPanel.location.document, XPathResult.ANY_TYPE, null));
+						} catch(e) {
+							return new Error("invalidXPathError");
+						}
+					} else {
+						var nodeList
+						try { 
+							nodeList = (contextNode || this.FirePathPanel.location.document).querySelectorAll(selector);
+						} catch(e) {
+							return new Error("invalidCSSSelectorError");
+						}
+						var result = [];
+						for(var i = 0, l = nodeList.length; i < l; i++) {
+							var node = nodeList[i];
+							if(node.firebugIgnore ||
+								(node.ownerElement && node.ownerElement.firebugIgnore) ||
+								(node.parentNode && node.parentNode.firebugIgnore) ||
+								node.id == "_firebugConsole")
+									continue; 
+							result.push(node);
+						}
+						return result;
 					}
-					return this.processResult(result);
 				]]></body>
 			</method>
 			
@@ -379,36 +423,70 @@
 			<method name="getContextNode" readonly="true">
 				<parameter name="reevaluate"/>
 				<body><![CDATA[
-					if(this.xPathContextToolbar.collapsed)
+					if(this.parentToolbar.collapsed)
 						return null;
-					if(!reevaluate && this.xPathContextNodes && this.lastXPathContext == this.xPathContext)
-						return this.xPathContextNodes[this.xPathContextNodeNumber.value - 1];
+					if(!reevaluate && this.parentNodes && this.lastParentSelector == this.parentSelector)
+						return this.parentNodes[this.parentNodeNumber.value - 1];
 					else {
-						var nodes = this._evaluateExpression(this.xPathContext);
+						var nodes = this._evaluateExpression(this.parentSelector);
 						
-						this.lastXPathContext = this.xPathContext;
+						this.lastParentSelector = this.parentSelector;
 						
 						if(FBL.isArray(nodes) && nodes.length > 0) {
 							if(!reevaluate) {
-								this.xPathContextNodeNumber.collapsed = (nodes.length == 1);
-								this.xPathContextNodeNumber.max = nodes.length;
-								this.xPathContextNodeNumber.value = 1;
-								this.xPathContextNodes = nodes;
-								this.getElement("xpath-context-textbox").setStatus();
+								this.parentNodeNumber.collapsed = (nodes.length == 1);
+								this.parentNodeNumber.max = nodes.length;
+								this.parentNodeNumber.value = 1;
+								this.parentNodes = nodes;
+								this.getElement("parent-textbox").setStatus();
 								return nodes[0];
 							} else {
-								this.xPathContextNodes = nodes;
-								return nodes[this.xPathContextNodeNumber.value - 1];
+								this.parentNodes = nodes;
+								return nodes[this.parentNodeNumber.value - 1];
 							}
 						} else {
-							this.xPathContextNodeNumber.collapsed = true;
-							this.xPathContextNodeNumber.value = 1;
-							this.xPathContextNodes = [null];
+							this.parentNodeNumber.collapsed = true;
+							this.parentNodeNumber.value = 1;
+							this.parentNodes = [null];
 							if(!(nodes instanceof Error))
-								this.getElement("xpath-context-textbox").setStatus("warning", FBL.$STR_XP("noParentNodeSelected"));
+								this.getElement("parent-textbox").setStatus("warning", FBL.$STR_XP("noParentNodeSelected"));
 							return null;
 						}
 					}
+				]]></body>
+			</method>
+			
+			<!--******************************************************************************************************
+				methods to manage the mode
+			-->
+			
+			<method name="changeMode">
+				<parameter name="event"/>
+				<body><![CDATA[
+					if(event.target == this.getElement("mode-selector-button"))
+						this.getElement("xpath-textbox").focus();
+					this.setEvaluationMode(event.target.getAttribute("mode"));
+					this.getElement("xpath-textbox").checkSyntax();
+					this.reset(),
+					this.evaluate();
+				]]></body>
+			</method>
+			
+			<method name="setEvaluationMode">
+				<parameter name="mode"/>
+				<body><![CDATA[
+					var evaluationMode;
+					if(!mode)
+						evaluationMode = Firebug.getPref(Firebug.prefDomain, "xpath.evaluationMode");
+					else
+						evaluationMode = mode;
+
+					var button = this.getElement("mode-selector-button");
+					this.evaluationMode = evaluationMode;
+					var menuitem = document.getAnonymousElementByAttribute(button, "mode", evaluationMode);
+					button.label = menuitem.label;
+					
+					Firebug.setPref(Firebug.prefDomain, "xpath.evaluationMode", evaluationMode);
 				]]></body>
 			</method>
 			
@@ -420,16 +498,17 @@
 				<parameter name="node"/>
 				<parameter name="noEval"/>
 				<body><![CDATA[
-					this.xPath = FBL.getXPathFromNode(node, this.getContextNode());
-					if(!noEval)
+					this.selector = this.selectorGenerator(node, this.getContextNode());
+					if(!noEval) {
 						this.evaluate();
+					}
 				]]></body>
 			</method>
 			
 			<method name="setContextNode">
 				<parameter name="node"/>
 				<body><![CDATA[
-					this.xPathContext = FBL.getXPathFromNode(node);
+					this.parentSelector = this.selectorGenerator(node);
 					this.evaluate();
 				]]></body>
 			</method>
@@ -444,22 +523,22 @@
 			
 			<method name="reset">
 				<body><![CDATA[
-					delete this.lastXPath;
-					delete this.lastContext;
-					delete this.lastXPathContext;
+					delete this.lastSelecor;
+					delete this.lastParent;
+					delete this.lastParentSelector;
 				]]></body>
 			</method>
 			
 			<method name="showXPathContext">
 				<parameter name="show"/>
 				<body><![CDATA[
-					this.xPathContextToolbar.collapsed = !show;
+					this.parentToolbar.collapsed = !show;
 					this.reset();
 				]]></body>
 			</method>
 			
 			<!--******************************************************************************************************
-				public methods, used by the autoCompleter
+				public methods, used by the xpath autoCompleter
 			-->
 			
 			<method name="hasResult">
@@ -470,7 +549,7 @@
 					
 					var result;
 					try{
-						result = xPathExpression.evaluate(this.getContextNode() || this.xPathPanel.location.document, XPathResult.ANY_UNORDERED_NODE_TYPE, null);
+						result = xPathExpression.evaluate(this.getContextNode() || this.FirePathPanel.location.document, XPathResult.ANY_UNORDERED_NODE_TYPE, null);
 					} catch(e) {
 						return false;
 					}
@@ -486,7 +565,7 @@
 					
 					var result;
 					try{
-						result = xPathExpression.evaluate(this.getContextNode() || this.xPathPanel.location.document, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
+						result = xPathExpression.evaluate(this.getContextNode() || this.FirePathPanel.location.document, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null);
 					} catch(e) {
 						return null;
 					}
@@ -502,6 +581,22 @@
 				<parameter name="aAnonymousID"/>
 				<body><![CDATA[
 					return document.getAnonymousElementByAttribute(this, "anonid", aAnonymousID);
+				]]></body>
+			</method>
+			
+			<method name="isValidSelector">
+				<parameter name="value"/>
+				<body><![CDATA[
+					if (this.evaluationMode === "xpath") {
+						return this.getXPathExpression(value) != null;
+					} else {
+						try {
+							this.FirePathPanel.location.document.querySelector(value);
+						} catch (e) {
+							return false;
+						}
+						return true
+					}
 				]]></body>
 			</method>
 			
