@@ -314,9 +314,6 @@
 					
 					var context = this.getContextNode(reevaluate);
 					if(selector != "") {
-						
-						if(!reevaluate && this.lastSelector == selector && this.lastParent == context)
-							return;
 							
 						var contextTextbox = this.getElement("parent-textbox");
 						if(context) {
