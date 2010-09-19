@@ -1049,6 +1049,9 @@ FBL.getXPathFromNode = function(node, context) {
 	return result;
 }
 
+const firepathClass = /\s*firepath-matching-node\s*/g;
+const multipleSpace = /\s+/g;
+
 FBL.getCssSelectorFromNode = function (node, context) {
 	var result = '',
 		node,
@@ -1061,9 +1064,9 @@ FBL.getCssSelectorFromNode = function (node, context) {
 			if(node.id) {
 				str = '#' + node.id;
 				stop = true;
-			} else if(node.className) {
-				str = '.' + node.className.trim()
-					.replace(/\s+/g, '').split(' ').join('.');
+			} else if(node.className && node.className.replace(firepathClass, '')) {
+				str = '.' + node.className.replace(firepathClass, ' ').trim()
+					.replace(multipleSpace, ' ').split(' ').join('.');
 				stop = true;
 			} else {
 				str = node.localName.toLowerCase();
