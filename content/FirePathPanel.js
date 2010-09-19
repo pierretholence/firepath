@@ -1071,9 +1071,9 @@ FBL.getCssSelectorFromNode = function (node, context) {
 			} else {
 				str = node.localName.toLowerCase();
 			}
+			
+			result = str + (result? '>' + result: ''); 
 		}
-		
-		result = str + (result? '>' + result: ''); 
 		
 		if(node instanceof Attr) {
 			node = node.ownerElement;
