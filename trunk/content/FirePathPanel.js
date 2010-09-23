@@ -1814,8 +1814,11 @@ Firebug.FirePathPanel.ResultHighlightModule = extend(Firebug.Module,
 		var element;
 		while(element = this.highlightedElement.pop()) {
 			removeClass(element, "firepath-matching-node");
-			if (element.className === '' || (element.className && element.className.trim().length === 0)) {
-				element.removeAttribute("class");
+			if (element.className) {
+				element.className = element.className.trim();
+				if(element.className.length === 0) {
+					element.removeAttribute("class");
+				}
 			}
 		}
 	}
