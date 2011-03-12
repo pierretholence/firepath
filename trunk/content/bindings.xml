@@ -339,6 +339,9 @@
 				<parameter name="xPath"/>
 				<body><![CDATA[
 					try {
+						if (xPath && FBL.isHtmlDocument(this.FirePathPanel.location.document)) {
+							xPath = xPath.toLowerCase();
+						}
 						return this.xPathEvaluator.createExpression(xPath, this.NSResolver);
 					} catch (e) {
 						return null;
