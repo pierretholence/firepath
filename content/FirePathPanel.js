@@ -980,6 +980,10 @@ FBL.isArray = function (object) {
 		return FirebugReps.Arr.isArray(object);
 }
 
+FBL.isHtmlDocument = function(doc) {
+	return doc.contentType === 'text/html';
+}
+
 FBL.getTagName = function(node) {
 	var ns = node.namespaceURI;
 	var prefix = node.lookupPrefix(ns);
@@ -990,13 +994,12 @@ FBL.getTagName = function(node) {
 	}
 	
 	var name = node.localName;
-	if (node.ownerDocument instanceof HTMLDocument) {
+	if (isHtmlDocument(node.ownerDocument)) {
 		//lower case only for HTML document
-		name = name.toLowerCase();
+		return name.toLowerCase();
+	} else {
+		return prefix + ":" + name;
 	}
-	
-	// In firefox 3.6 the ns for html and xhtml nodes is http://www.w3.org/1999/xhtml we don't need to add a prefix for them
-	return (prefix && prefix != 'xhtml'? prefix + ":":"") + name;	
 }
 
 FBL.getPrefixFromNS = function(ns) {
