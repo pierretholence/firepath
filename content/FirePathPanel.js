@@ -1110,6 +1110,8 @@ function getNodePosition(node) {
 // ************************************************************************************************
 // Extension of InsideOutBox to support multiple selection
 
+var InsideOutBox = Firebug.InsideOutBox ? Firebug.InsideOutBox : top.InsideOutBox;
+
 InsideOutBox.prototype = extend(InsideOutBox.prototype, {
 	
 	selectMultiple: function(objects) {
