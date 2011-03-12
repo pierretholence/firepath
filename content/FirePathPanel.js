@@ -998,7 +998,7 @@ FBL.getTagName = function(node) {
 		//lower case only for HTML document
 		return name.toLowerCase();
 	} else {
-		return prefix + ":" + name;
+		return (prefix? prefix + ':': '') + name;
 	}
 }
 
