@@ -504,6 +504,9 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 	// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 	// Inspector management methods
 	
+	// make the panel inspectable (new in Firebug 1.7)
+	inspectable: true,
+	
 	startInspecting: function() {
 		this.inspecting = true;
 		this.previousLocation = this.location;
@@ -511,8 +514,13 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 		this.setResult(null, null);
 	},
 	
-	stopInspecting: function(cancelled) {
+	stopInspecting: function(inspectingNode, cancelled) {
 		this.inspecting = false;
+		// in Firebug 1.7 the signature of this method changed
+		// before there was only on arg: cancelled.
+		if (!Firebug.Inspector._resolveInspectingPanelName) {
+			cancelled = inspectingNode;
+		}
 		if(cancelled) {
 			this.navigate(this.previousLocation);
 			this.firePathBar.selector = this.previousSelector;
@@ -1832,105 +1840,108 @@ Firebug.FirePathPanel.ResultHighlightModule = extend(Firebug.Module,
 // ************************************************************************************************
 // Overwrite inspector to make sure it stay on the FirePath tab (instead of going to the HTML tab)
 
-overwriteMethodForPanel(
-	Firebug.Inspector, 
-	"startInspecting", 
-	panelName, 
-	function (context) {
-		if (this.inspecting || !context || !context.loaded)
-			return;
+// Firebug 1.7 allow to have inspectable panel so this is no longuer needed.
+if (!Firebug.Inspector._resolveInspectingPanelName) {
+	overwriteMethodForPanel(
+		Firebug.Inspector, 
+		"startInspecting", 
+		panelName, 
+		function (context) {
+			if (this.inspecting || !context || !context.loaded)
+				return;
 
-		this.inspecting = true;
-		this.inspectingContext = context;
+			this.inspecting = true;
+			this.inspectingContext = context;
 
-		context.chrome.setGlobalAttribute("cmd_toggleInspecting", "checked", "true");
-		this.attachInspectListeners(context);
+			context.chrome.setGlobalAttribute("cmd_toggleInspecting", "checked", "true");
+			this.attachInspectListeners(context);
 
-		// Remember the previous panel and bar state so we can revert if the user cancels
-		this.previousPanelName = context.panelName;
-		this.previousSidePanelName = context.sidePanelName;
-		this.previouslyCollapsed = $("fbContentBox").collapsed;
-		this.previouslyFocused = context.detached && context.chrome.isFocused();
+			// Remember the previous panel and bar state so we can revert if the user cancels
+			this.previousPanelName = context.panelName;
+			this.previousSidePanelName = context.sidePanelName;
+			this.previouslyCollapsed = $("fbContentBox").collapsed;
+			this.previouslyFocused = context.detached && context.chrome.isFocused();
 
-		var panel;
-		if(this.previouslyCollapsed) {
-			panel = context.chrome.selectPanel("html");
-			this.previousObject = panel.selection;
-		} else {
-			panel = context.getPanel(panelName);
-		}
-
-		if (context.detached)
-			FirebugChrome.focus();
-		else
-			Firebug.showBar(true);
-
-		panel.panelNode.focus();
-		panel.startInspecting();
-
-		if (context.hoverNode)
-			this.inspectNode(context.hoverNode);
-	}
-);
-
-overwriteMethodForPanel(
-	Firebug.Inspector, 
-	"stopInspecting", 
-	panelName, 
-	function(cancelled, waitForClick){
-		if (!this.inspecting) 
-			return;
-		
-		var context = this.inspectingContext;
-		
-		if (this.inspectTimeout) {
-			context.clearTimeout(this.inspectTimeout);
-			delete this.inspectTimeout;
-		}
-		
-		this.detachInspectListeners(context);
-		if (!waitForClick) 
-			this.detachClickInspectListeners(context.window);
-		
-		context.chrome.setGlobalAttribute("cmd_toggleInspecting", "checked", "false");
-		
-		this.inspecting = false;
-		
-		var htmlPanel = context.getPanel("html");
-		var firePathPanel = context.getPanel(panelName);
-		
-		if (this.previouslyFocused) 
-			context.chrome.focus();
-		
-		if (cancelled) {
-			if (this.previouslyCollapsed) 
-				Firebug.showBar(false);
-			
-			if (this.previousPanelName == "html") 
-				context.chrome.select(this.previousObject);
-			else 
-				context.chrome.selectPanel(this.previousPanelName, this.previousSidePanelName);
-		}
-		else {
+			var panel;
 			if(this.previouslyCollapsed) {
-				context.chrome.select(htmlPanel.selection);
-				context.chrome.getSelectedPanel().panelNode.focus();
+				panel = context.chrome.selectPanel("html");
+				this.previousObject = panel.selection;
+			} else {
+				panel = context.getPanel(panelName);
 			}
+
+			if (context.detached)
+				FirebugChrome.focus();
+			else
+				Firebug.showBar(true);
+
+			panel.panelNode.focus();
+			panel.startInspecting();
+
+			if (context.hoverNode)
+				this.inspectNode(context.hoverNode);
 		}
-		
-		if(this.previouslyCollapsed)
-			htmlPanel.stopInspecting(htmlPanel.selection, cancelled);
-		else
-			firePathPanel.stopInspecting(cancelled);
-		
-		this.inspectNode(null);
-		
-		delete this.previousObject;
-		delete this.previousPanelName;
-		delete this.previousSidePanelName;
-		delete this.inspectingContext;
-	}
-);
+	);
+
+	overwriteMethodForPanel(
+		Firebug.Inspector, 
+		"stopInspecting", 
+		panelName, 
+		function(cancelled, waitForClick){
+			if (!this.inspecting) 
+				return;
+			
+			var context = this.inspectingContext;
+			
+			if (this.inspectTimeout) {
+				context.clearTimeout(this.inspectTimeout);
+				delete this.inspectTimeout;
+			}
+			
+			this.detachInspectListeners(context);
+			if (!waitForClick) 
+				this.detachClickInspectListeners(context.window);
+			
+			context.chrome.setGlobalAttribute("cmd_toggleInspecting", "checked", "false");
+			
+			this.inspecting = false;
+			
+			var htmlPanel = context.getPanel("html");
+			var firePathPanel = context.getPanel(panelName);
+			
+			if (this.previouslyFocused) 
+				context.chrome.focus();
+			
+			if (cancelled) {
+				if (this.previouslyCollapsed) 
+					Firebug.showBar(false);
+				
+				if (this.previousPanelName == "html") 
+					context.chrome.select(this.previousObject);
+				else 
+					context.chrome.selectPanel(this.previousPanelName, this.previousSidePanelName);
+			}
+			else {
+				if(this.previouslyCollapsed) {
+					context.chrome.select(htmlPanel.selection);
+					context.chrome.getSelectedPanel().panelNode.focus();
+				}
+			}
+			
+			if(this.previouslyCollapsed)
+				htmlPanel.stopInspecting(htmlPanel.selection, cancelled);
+			else
+				firePathPanel.stopInspecting(cancelled);
+			
+			this.inspectNode(null);
+			
+			delete this.previousObject;
+			delete this.previousPanelName;
+			delete this.previousSidePanelName;
+			delete this.inspectingContext;
+		}
+	);
+}
 
 Firebug.registerPanel(Firebug.FirePathPanel);
 Firebug.registerModule(Firebug.FirePathPanel.LocationHighlightModule, Firebug.FirePathPanel.ResultHighlightModule);
