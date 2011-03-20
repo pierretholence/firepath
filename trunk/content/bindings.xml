@@ -49,10 +49,7 @@
 					if (this.value === "" || this.firePathBar.isValidSelector(this.value)) {
 						this.setStatus();
 					} else {
-						var errorMessage = this.firePathBar.evaluationMode === 'xpath'?
-							FBL.$STR_XP("invalidXPathError"):
-							FBL.$STR_XP("invalidCSSSelectorError");
-						this.setStatus("error", errorMessage);
+						this.setStatus("error", FBL.$STR_XP("invalidSelectorError-" + this.firePathBar.evaluationMode));
 					}
 				]]></body>
 			</method>
@@ -98,6 +95,7 @@
 					<xul:menupopup>
 						<xul:menuitem mode="xpath" label="&FirePath.xPath.label;" accesskey="&FirePath.xPath.key;" />
 						<xul:menuitem mode="css" label="&FirePath.CSS.label;" accesskey="&FirePath.CSS.key;"/>
+						<xul:menuitem mode="sizzle" label="&FirePath.Sizzle.label;" accesskey="&FirePath.Sizzle.key;"/>
 					</xul:menupopup>
 				</xul:toolbarbutton>
 				<xul:hbox class="firepath-field-container" flex="1">
@@ -135,16 +133,16 @@
 			
 			<property name="autoCompleter" readonly="true">
 				<getter><![CDATA[
-					if(this.evaluationMode === 'css'){
+					if(this.evaluationMode === 'xpath'){
+						return this._autoCompleter ?
+						this._autoCompleter : this._autoCompleter = new Firebug.FirePathPanel.xPathAutoCompleter(this);
+					} else {
 						return {
 							complete: function(){
 								return [];
 							},
 							reset: function(){}
 						};
-					} else {
-						return this._autoCompleter ?
-						this._autoCompleter : this._autoCompleter = new Firebug.FirePathPanel.xPathAutoCompleter(this);
 					}
 				]]></getter>
 			</property>
@@ -204,8 +202,9 @@
 			</property>
 			
 			<property name="selectorGenerator" readonly="true">
-				<getter><![CDATA[	
-					return this.evaluationMode === 'xpath'? 
+				<getter><![CDATA[
+					// Sizzle is more CSS than XPath, so let it get grouped with css
+					return this.evaluationMode === 'xpath'?
 							FBL.getXPathFromNode: FBL.getCssSelectorFromNode;
 				]]></getter>
 			</property>
@@ -352,35 +351,62 @@
 			<method name="_evaluateExpression">
 				<parameter name="selector"/>
 				<parameter name="contextNode"/>
+				<parameter name="evaluateParent"/>
 				<body><![CDATA[
-					Firebug.FirePathPanel.ResultHighlightModule.clear(this.FirePathPanel.location.document);
-					
-					if(this.evaluationMode === 'xpath') {
-						var xPathExpression = this.getXPathExpression(selector);
-						if(!xPathExpression) return new Error("invalidXPathError");
+						Firebug.FirePathPanel.ResultHighlightModule.clear(this.FirePathPanel.location.document);
 						try {
-							return this.processResult(xPathExpression.evaluate(contextNode || this.FirePathPanel.location.document, XPathResult.ANY_TYPE, null));
-						} catch(e) {
-							return new Error("invalidXPathError");
+							if (this.evaluationMode === 'xpath') {
+								var xPathExpression = this.getXPathExpression(selector);
+								if (!xPathExpression) return new Error("invalidSelectorError-"+this.evaluationMode);
+								return this.processResult(xPathExpression.evaluate(contextNode || this.FirePathPanel.location.document, XPathResult.ANY_TYPE, null));
+							} else {
+								var nodeList;
+								if (this.evaluationMode === 'sizzle') {
+									nodeList = this.evaluateWithSizzle(selector, contextNode, evaluateParent);
+								} else {
+									nodeList = (contextNode || this.FirePathPanel.location.document).querySelectorAll(selector);
+								}
+								var result = [];
+								for (var i = 0, l = nodeList.length; i < l; i++) {
+									var node = nodeList[i];
+									if (node.firebugIgnore ||
+											(node.ownerElement && node.ownerElement.firebugIgnore) ||
+											(node.parentNode && node.parentNode.firebugIgnore) ||
+											node.id == "_firebugConsole")
+										continue;
+									result.push(node);
+								}
+								return result;
+							}
+						} catch(ex) {
+							return new Error("invalidSelectorError-" + this.evaluationMode);
 						}
+					]]></body>
+			</method>
+
+			<method name="evaluateWithSizzle">
+				<parameter name="selector"/>
+				<parameter name="contextNode"/>
+				<parameter name="evaluateParent"/>
+				<body><![CDATA[
+					var win = this.FirePathPanel.location,
+					doc = win.document;
+					if (!win.wrappedJSObject._firePathSizzle) {
+						// Inject Sizzle.js into the page.
+						var scriptSource = FBL.getResource("chrome://firepath/content/sizzle.js");
+						var addedElement = FBL.addScript(doc, "_firePathSizzle", scriptSource);
+
+						// take the script tag back out now that the script is loaded
+						addedElement.parentNode.removeChild(addedElement);
+					}
+					if (evaluateParent) {
+						win.wrappedJSObject._firePathContext = win.wrappedJSObject._firePathSizzle(selector);
+						return win.wrappedJSObject._firePathContext;
+					} else if(contextNode) {
+						return win.wrappedJSObject._firePathSizzle(selector, 
+							win.wrappedJSObject._firePathContext[this.parentNodeNumber.value - 1]);
 					} else {
-						var nodeList
-						try { 
-							nodeList = (contextNode || this.FirePathPanel.location.document).querySelectorAll(selector);
-						} catch(e) {
-							return new Error("invalidCSSSelectorError");
-						}
-						var result = [];
-						for(var i = 0, l = nodeList.length; i < l; i++) {
-							var node = nodeList[i];
-							if(node.firebugIgnore ||
-								(node.ownerElement && node.ownerElement.firebugIgnore) ||
-								(node.parentNode && node.parentNode.firebugIgnore) ||
-								node.id == "_firebugConsole")
-									continue; 
-							result.push(node);
-						}
-						return result;
+						return win.wrappedJSObject._firePathSizzle(selector);
 					}
 				]]></body>
 			</method>
@@ -428,7 +454,7 @@
 					if(!reevaluate && this.parentNodes && this.lastParentSelector == this.parentSelector)
 						return this.parentNodes[this.parentNodeNumber.value - 1];
 					else {
-						var nodes = this._evaluateExpression(this.parentSelector);
+						var nodes = this._evaluateExpression(this.parentSelector, null, true);
 						
 						this.lastParentSelector = this.parentSelector;
 						
@@ -591,7 +617,11 @@
 						return this.getXPathExpression(value) != null;
 					} else {
 						try {
-							this.FirePathPanel.location.document.querySelector(value);
+							if (this.evaluationMode === "sizzle") {
+								this.evaluateWithSizzle(value);
+							} else {
+								this.FirePathPanel.location.document.querySelector(value);
+							}
 						} catch (e) {
 							return false;
 						}

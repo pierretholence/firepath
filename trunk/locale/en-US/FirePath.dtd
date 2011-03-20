@@ -8,3 +8,5 @@
 <!ENTITY FirePath.eval.button "Eval">
 <!ENTITY FirePath.CSS.label "CSS: ">
 <!ENTITY FirePath.CSS.key "c">
+<!ENTITY FirePath.Sizzle.label "Sizzle: ">
+<!ENTITY FirePath.Sizzle.key "s">
