@@ -19,5 +19,6 @@
     <em:creator>Pierre Tholence</em:creator>
     <em:contributor>David Rees</em:contributor>
     <em:iconURL>chrome://firepath/content/FirePath.png</em:iconURL>
+    <em:type>2</em:type>
   </Description>
 </RDF>
