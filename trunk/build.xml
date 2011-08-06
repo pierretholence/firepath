@@ -18,6 +18,7 @@
 				<exclude name="build.xml"/>
 				<exclude name=".project"/>
 				<exclude name="**/.svn"/>
+				<exclude name="**/**.swp"/>
 			</fileset>
 		</copy>
 		<mkdir dir="${builddir}"/>
