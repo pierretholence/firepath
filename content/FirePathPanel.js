@@ -188,7 +188,7 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 			this.firePathStatusBar.show(this.context, show);
 		} catch (e) {}
 		
-		var $ = Firebug.chrome.getElementById;
+		var $ = Firebug.chrome.getElementById || Firebug.chrome.$;
 		
 		// when there is a visibility: hidden style the collapsed attribute doesn't work correctly
 		$("fbPanelStatus").removeAttribute("style");
