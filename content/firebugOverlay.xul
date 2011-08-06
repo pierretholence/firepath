@@ -13,13 +13,13 @@
 	<popup id="contentAreaContextMenu">
 		<menuitem id="menu_fpShow" label="&FirePath.context.show.label;"
 			insertafter="context-viewpartialsource-selection"
-			oncommand="Firebug.toggleBar(true); FirebugChrome.selectPanel('firepath').updateSelection(document.popupNode)"
+			oncommand="Firebug.toggleBar(true); Firebug.chrome.selectPanel('firepath').updateSelection(document.popupNode)"
 			accesskey="&FirePath.context.show.key;"/>
 	</popup>
 
 	<hbox id="fbToolbarInner">
 		<toolbarbutton id="FirePathBarHighlightButton" collapsed="true" label="&FirePath.highlight.button;" class="toolbar-text-button"
-			oncommand="Firebug.FirePathPanel.ResultHighlightModule.toggleHighlight(FirebugContext);"
+			oncommand="Firebug.FirePathPanel.ResultHighlightModule.toggleHighlight();"
 			checked="false" disabled="true" insertafter="fbLocationList"/>
 		<firepathbar id="FirePathBar" flex="1"  collapsed="true" insertafter="fbLocationList"/>
 	</hbox>

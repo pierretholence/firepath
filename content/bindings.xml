@@ -73,13 +73,13 @@
 						this.firePathBar.evaluate();
 						break;
 					case KeyEvent.DOM_VK_UP:
-						this.firePathBar.autoCompleter.complete(FirebugContext, this, true, true);
+						this.firePathBar.autoCompleter.complete(Firebug.currentContext, this, true, true);
 						this.checkSyntax();
 						break;
 					case KeyEvent.DOM_VK_TAB:
 						event.preventDefault();
 					case KeyEvent.DOM_VK_DOWN:
-						this.firePathBar.autoCompleter.complete(FirebugContext, this, true, false);
+						this.firePathBar.autoCompleter.complete(Firebug.currentContext, this, true, false);
 						this.checkSyntax();
 						break;
 				}
@@ -197,7 +197,7 @@
 			
 			<property name="FirePathPanel" readonly="true">
 				<getter><![CDATA[	
-					return FirebugContext.getPanel(Firebug.FirePathPanel.prototype.name);
+					return Firebug.currentContext.getPanel(Firebug.FirePathPanel.prototype.name);
 				]]></getter>
 			</property>
 			
@@ -670,7 +670,7 @@
 			</xul:statusbarpanel>
 			<xul:statusbarpanel anonid="firepath-result-progressmeter-container" collapsed="true">
 				<xul:image src="chrome://firebug/skin/errorIcon.png" 
-					onmousedown="document.getBindingParent(this).cancelLoading(FirebugContext)" 
+					onmousedown="document.getBindingParent(this).cancelLoading(Firebug.currentContext)" 
 					class="firepath-cancel-result-loading-button"/>
 				<xul:progressmeter anonid="firepath-result-progressmeter"/>
 			</xul:statusbarpanel>

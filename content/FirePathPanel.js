@@ -18,7 +18,6 @@
  */
 
 FBL.ns(function() { with (FBL) {
-
 // ************************************************************************************************
 // Constants
 
@@ -120,26 +119,24 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 	name: panelName,
 	title: "FirePath",
 
-	initialize: function() {
-		Firebug.Panel.initialize.apply(this, arguments);
-		this.addStyleSheet(this.document);
-		this.location = this.getDefaultLocation(this.context);
-		this.firePathBar = (this.context.chrome?this.context.chrome.$("FirePathBar"): $("FirePathBar"));
+	initialize: function(context, doc) {
+		this.addStyleSheet(doc);
+		this.location = this.getDefaultLocation(context);
+		this.firePathBar = Firebug.chrome.$('FirePathBar');
 		this.firePathBar.initialize();
-		this.firePathStatusBar = (this.context.chrome?this.context.chrome.$("FirePathStatusBar"): $("FirePathStatusBar"));
-		
-		this.ioBoxContainer = this.document.createElement("div");
-		setClass(this.ioBoxContainer, "io-box-container");
-		this.panelNode.appendChild(this.ioBoxContainer);
+		this.firePathStatusBar = Firebug.chrome.$("FirePathStatusBar");
 		
 		this.onMouseDown = bind(this.onMouseDown, this);
 		
 		this.inspecting = false;
+		Firebug.Panel.initialize.apply(this, arguments);
 	},
 	
 	destroy: function(state) {
 		state.persistedLocation = this.persisteLocation();
-		this.firePathBar.persiste(state);
+		if (this.firePathBar) {
+			this.firePathBar.persiste(state);
+		}
 		this.stopLoading();
 		
 		if (this.ioBox) {
@@ -151,25 +148,32 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 	
 	initializeNode: function(oldPanelNode) {
 		this.panelNode.addEventListener("mousedown", this.onMouseDown, false);
+
+		this.ioBoxContainer = this.document.createElement("div");
+		setClass(this.ioBoxContainer, "io-box-container");
+		this.panelNode.appendChild(this.ioBoxContainer);
+		
+		if(!this.ioBox) {
+			this.ioBox = new InsideOutBox(this, this.ioBoxContainer);
+		}
+		Firebug.Panel.initializeNode.apply(this, arguments);
 	},
 
 	destroyNode: function() {
 		this.panelNode.removeEventListener("mousedown", this.onMouseDown, false);
+		Firebug.Panel.destroyNode.apply(this, arguments);
 	},
 	
 	show: function(state) {
 		if (this.context.loaded) {
 			this.showModules(true);
-			
-			if(!this.ioBox) {
-				this.ioBox = new InsideOutBox(this, this.ioBoxContainer);
-				if(state) {
-					this.restoreLocation(state.persistedLocation);
-					this.firePathBar.restore(state);
-					this.firePathBar.evaluate(true);
-				} else {
-					this.ioBox.createObjectBox(this.rootElement || this.location.document);
-				}
+
+			if(state) {
+				this.restoreLocation(state.persistedLocation);
+				this.firePathBar.restore(state);
+				this.firePathBar.evaluate(true);
+			} else {
+				this.ioBox.createObjectBox(this.rootElement || this.location.document);
 			}
 		}
 	},
@@ -184,9 +188,7 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 			this.firePathStatusBar.show(this.context, show);
 		} catch (e) {}
 		
-		var $ = FBL.$;
-		if(this.context.chrome)
-			$ = this.context.chrome.$;
+		var $ = Firebug.chrome.getElementById;
 		
 		// when there is a visibility: hidden style the collapsed attribute doesn't work correctly
 		$("fbPanelStatus").removeAttribute("style");
@@ -196,17 +198,17 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 	
 	detach: function(oldChrome, newChrome) {
 		Firebug.Panel.detach.apply(this, arguments);
-		if(this.context == FirebugContext) {
+		if(this.context == Firebug.currentContext) {
 			this.firePathBar.persiste(this.context);
 		}
 		this.firePathBar = newChrome.$("FirePathBar");
 		this.firePathBar.initialize();
 		this.firePathStatusBar = newChrome.$("FirePathStatusBar");
-		if(this.context == FirebugContext) {
+		if(this.context == Firebug.currentContext) {
 			this.firePathBar.restore(this.context);
 			this.firePathBar.currentContext = this.context;
 		}
-		if(this.context.browser.detached || (newChrome != Firebug.originalChrome && this.context == FirebugContext)) {
+		if(this.context.browser.detached || (newChrome != Firebug.originalChrome && this.context == Firebug.currentContext)) {
 			Firebug.FirePathPanel.LocationHighlightModule.addLocationListener(newChrome);
 		} else {
 			Firebug.FirePathPanel.LocationHighlightModule.removeLocationListener(oldChrome);
@@ -225,8 +227,7 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 				object instanceof Text ||
 				object instanceof Attr ||
 				object instanceof Comment ||
-				object instanceof Document ||
-				object instanceof SourceText )
+				object instanceof Document )
 			return 1;
 		else
 			return 0;
@@ -437,9 +438,6 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 	},
 
 	getParentObject: function(node) {
-		if (node instanceof SourceText)
-			return node.owner;
-
 		if (this.rootElement && node == this.rootElement)
 			return null;
 
@@ -543,7 +541,7 @@ Firebug.FirePathPanel.prototype = extend(Firebug.Panel,
 			
 			Firebug.Inspector.highlightObject(null);
 			element.scrollIntoView();
-			Firebug.Inspector.highlightObject(element, FirebugContext);
+			Firebug.Inspector.highlightObject(element, Firebug.currentContext);
 		}
 	},
 	
@@ -641,7 +639,7 @@ function overwriteMethodForPanel(object, methodName, panelName, newMethod ) {
 	if(object[methodName] && object[methodName] instanceof Function)
 		object["default" + methodName] = object[methodName];
 	object[methodName] = function () {
-		var selectedPanelName = FirebugContext.panelName;
+		var selectedPanelName = Firebug.currentContext.panelName;
 
 		if(selectedPanelName != panelName) {
 			if(object["default" + methodName])
@@ -1660,11 +1658,11 @@ Firebug.FirePathPanel.LocationHighlightModule = extend(Firebug.Module,
 {
 	// add event listener
 	initializeUI: function(detachArgs) {
-		this.addLocationListener(FirebugChrome);
+		this.addLocationListener(Firebug.chrome);
 	},
 	
 	shutdown: function() {
-		this.removeLocationListener(FirebugChrome);
+		this.removeLocationListener(Firebug.chrome);
 	},
 	
 	addLocationListener: function(chrome) {
@@ -1678,12 +1676,12 @@ Firebug.FirePathPanel.LocationHighlightModule = extend(Firebug.Module,
 	},
 	
 	onLocationMouseOver: function(event) {
-		var panel = FirebugContext.browser.chrome.getSelectedPanel();
+		var panel = Firebug.chrome.getSelectedPanel();
 	
 		if(panel.name == panelName) {
 			var repObject = event.originalTarget.repObject;
 			if(repObject && repObject.frameElement) {
-				Firebug.Inspector.highlightObject(repObject.frameElement, FirebugContext);
+				Firebug.Inspector.highlightObject(repObject.frameElement, Firebug.currentContext);
 			}
 		}
 	},
@@ -1714,11 +1712,11 @@ Firebug.FirePathPanel.ResultHighlightModule = extend(Firebug.Module,
 	},
 	
 	reattachContext: function(browser, context) {
-		this.highlightButton = browser.chrome.$("FirePathBarHighlightButton");
+		this.highlightButton = Firebug.chrome.$("FirePathBarHighlightButton");
 	},
 	
 	showContext: function(browser, context) {
-		this.highlightButton = browser.chrome.$("FirePathBarHighlightButton");
+		this.highlightButton = Firebug.chrome.$("FirePathBarHighlightButton");
 		this.refreshHighlightButton(context.getPanel(panelName));
 	},
 	
@@ -1727,13 +1725,15 @@ Firebug.FirePathPanel.ResultHighlightModule = extend(Firebug.Module,
 	},
 	
 	showPanel: function(browser, panel) {
-		if(panel.name == panelName) {
-			this.highlightButton.collapsed = false;
-			if(!panel.context.firePathResultNotHighlighted)
-				this.highlight(panel.context);
-		} else {
-			this.highlightButton.collapsed = true;
-			this.clear();
+		if(panel) {
+			if(panel.name == panelName) {
+				this.highlightButton.collapsed = false;
+				if(!panel.context.firePathResultNotHighlighted)
+					this.highlight(panel.context);
+			} else {
+				this.highlightButton.collapsed = true;
+				this.clear();
+			}
 		}
 	},
 	
@@ -1758,7 +1758,8 @@ Firebug.FirePathPanel.ResultHighlightModule = extend(Firebug.Module,
 		}
 	},
 	
-	toggleHighlight: function(context) {
+	toggleHighlight: function() {
+		var context = Firebug.currentContext;
 		if(!context.firePathResultNotHighlighted) {
 			this.clear();
 		} else {
@@ -1837,113 +1838,7 @@ Firebug.FirePathPanel.ResultHighlightModule = extend(Firebug.Module,
 	}
 })
 
-// ************************************************************************************************
-// Overwrite inspector to make sure it stay on the FirePath tab (instead of going to the HTML tab)
-
-// Firebug 1.7 allow to have inspectable panel so this is no longuer needed.
-if (!Firebug.Inspector._resolveInspectingPanelName) {
-	overwriteMethodForPanel(
-		Firebug.Inspector, 
-		"startInspecting", 
-		panelName, 
-		function (context) {
-			if (this.inspecting || !context || !context.loaded)
-				return;
-
-			this.inspecting = true;
-			this.inspectingContext = context;
-
-			context.chrome.setGlobalAttribute("cmd_toggleInspecting", "checked", "true");
-			this.attachInspectListeners(context);
-
-			// Remember the previous panel and bar state so we can revert if the user cancels
-			this.previousPanelName = context.panelName;
-			this.previousSidePanelName = context.sidePanelName;
-			this.previouslyCollapsed = $("fbContentBox").collapsed;
-			this.previouslyFocused = context.detached && context.chrome.isFocused();
-
-			var panel;
-			if(this.previouslyCollapsed) {
-				panel = context.chrome.selectPanel("html");
-				this.previousObject = panel.selection;
-			} else {
-				panel = context.getPanel(panelName);
-			}
-
-			if (context.detached)
-				FirebugChrome.focus();
-			else
-				Firebug.showBar(true);
-
-			panel.panelNode.focus();
-			panel.startInspecting();
-
-			if (context.hoverNode)
-				this.inspectNode(context.hoverNode);
-		}
-	);
-
-	overwriteMethodForPanel(
-		Firebug.Inspector, 
-		"stopInspecting", 
-		panelName, 
-		function(cancelled, waitForClick){
-			if (!this.inspecting) 
-				return;
-			
-			var context = this.inspectingContext;
-			
-			if (this.inspectTimeout) {
-				context.clearTimeout(this.inspectTimeout);
-				delete this.inspectTimeout;
-			}
-			
-			this.detachInspectListeners(context);
-			if (!waitForClick) 
-				this.detachClickInspectListeners(context.window);
-			
-			context.chrome.setGlobalAttribute("cmd_toggleInspecting", "checked", "false");
-			
-			this.inspecting = false;
-			
-			var htmlPanel = context.getPanel("html");
-			var firePathPanel = context.getPanel(panelName);
-			
-			if (this.previouslyFocused) 
-				context.chrome.focus();
-			
-			if (cancelled) {
-				if (this.previouslyCollapsed) 
-					Firebug.showBar(false);
-				
-				if (this.previousPanelName == "html") 
-					context.chrome.select(this.previousObject);
-				else 
-					context.chrome.selectPanel(this.previousPanelName, this.previousSidePanelName);
-			}
-			else {
-				if(this.previouslyCollapsed) {
-					context.chrome.select(htmlPanel.selection);
-					context.chrome.getSelectedPanel().panelNode.focus();
-				}
-			}
-			
-			if(this.previouslyCollapsed)
-				htmlPanel.stopInspecting(htmlPanel.selection, cancelled);
-			else
-				firePathPanel.stopInspecting(cancelled);
-			
-			this.inspectNode(null);
-			
-			delete this.previousObject;
-			delete this.previousPanelName;
-			delete this.previousSidePanelName;
-			delete this.inspectingContext;
-		}
-	);
-}
-
 Firebug.registerPanel(Firebug.FirePathPanel);
 Firebug.registerModule(Firebug.FirePathPanel.LocationHighlightModule, Firebug.FirePathPanel.ResultHighlightModule);
-if(Firebug.registerUIListener) Firebug.registerUIListener(Firebug.FirePathPanel.ResultHighlightModule);
+Firebug.registerUIListener(Firebug.FirePathPanel.ResultHighlightModule);
 }});
