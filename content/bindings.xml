@@ -394,22 +394,38 @@
 				<body><![CDATA[
 					var win = this.FirePathPanel.location,
 					doc = win.document;
-					if (!win.wrappedJSObject._firePathSizzle) {
+					var firePathSizzle = win.firePathSizzle;
+					if (!firePathSizzle) {
 						// Inject Sizzle.js into the page.
+
+						// Store target window's original Sizzle, if any
+						var originalSizzle = win.wrappedJSObject.Sizzle; 							
 						var scriptSource = FBL.getResource("chrome://firepath/content/sizzle.js");
-						var addedElement = FBL.addScript(doc, "_firePathSizzle", scriptSource);
+						var addedElement = FBL.addScript(doc, "firePathSizzle", scriptSource);
+
+						// Store the newly created Sizzle on the wrapper
+						win.firePathSizzle = win.wrappedJSObject.Sizzle;
+
+						// Restore the original target's Sizzle, if any
+						if (originalSizzle) {
+							win.wrappedJSObject.Sizzle = originalSizzle;
+						} else {
+							delete win.wrappedJSObject.Sizzle;
+						}
 
 						// take the script tag back out now that the script is loaded
-						addedElement.parentNode.removeChild(addedElement);
+						addedElement.parentNode.removeChild(addedElement); 
+
+						firePathSizzle = win.firePathSizzle;
 					}
 					if (evaluateParent) {
-						win.wrappedJSObject._firePathContext = win.wrappedJSObject._firePathSizzle(selector);
-						return win.wrappedJSObject._firePathContext;
+						win.firePathContext = firePathSizzle(selector);
+						return win.firePathContext;
 					} else if(contextNode) {
-						return win.wrappedJSObject._firePathSizzle(selector, 
-							win.wrappedJSObject._firePathContext[this.parentNodeNumber.value - 1]);
+						return firePathSizzle(selector,
+							win.firePathContext[this.parentNodeNumber.value - 1]);
 					} else {
-						return win.wrappedJSObject._firePathSizzle(selector);
+						return firePathSizzle(selector);
 					}
 				]]></body>
 			</method>

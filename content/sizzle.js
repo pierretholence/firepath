@@ -1381,6 +1381,6 @@ var posProcess = function( selector, context ) {
 
 // EXPOSE
 
-window._firePathSizzle = Sizzle;
+window.Sizzle = Sizzle;
 
 })();
