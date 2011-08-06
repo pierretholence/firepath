@@ -341,7 +341,7 @@
 						if (xPath && FBL.isHtmlDocument(this.FirePathPanel.location.document)) {
 							// we want to lower case the XPath expression but not the literal inside.
 							//  eg: //DIV[@id='TEST'] should become //div[@id='TEST']
-							xPath = xPath.replace(/([^']*)('[^']+')?/g, 
+							xPath = xPath.replace(/([^'"]*)('[^']+'|"[^"]+")?/g, 
 								function(str, expression, literal){return expression.toLowerCase() + literal;});
 						}
 						return this.xPathEvaluator.createExpression(xPath, this.NSResolver);
