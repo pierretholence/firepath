@@ -1013,8 +1013,10 @@ FBL.getPrefixFromNS = function(ns) {
 FBL.getXPathFromNode = function(node, context) {
 	var result = "";
 	var stop = false;
+	var usingClass = true
 	var absolute = Firebug.getPref(Firebug.prefDomain, "firepath.generateAbsoluteXPath");
-
+	var classname = '';
+	
 	var parent = context || node.ownerDocument;
 	while (node && node != parent && !stop) {
 		var str = "";
@@ -1033,14 +1035,25 @@ FBL.getXPathFromNode = function(node, context) {
 			break;
 			case Node.ELEMENT_NODE:
 
-				var name = getTagName(node);
+				var name = node.tagName.toLowerCase();
 
 				if(!absolute && node.id && node.id != "") {
 					str = ".//*[@id='" + node.id + "']";
 					position = null;
 					stop = true;
+				} else if(!absolute && node.tagName == 'LABEL' && isInForm(node) && (_for = getForAttribute(node))){
+					str = ".//*[@for='" + _for + "']";
+					stop = true;
+				}else if(!absolute && (classname = isClassNameUnique(node)) && usingClass) {
+					str = ".//*[@class='" + classname + "']";
+					position = null;
+					stop = true;	
+				}else if(!absolute && isTagNameUnique(node)) {
+					str = ".//" + name;
+					position = null;
+					stop = true;	
 				} else {
-					str = name;
+				str = name;
 				}
 				
 			break;
@@ -1048,12 +1061,30 @@ FBL.getXPathFromNode = function(node, context) {
 		
 		result = str + (position ? "[" + position + "]" : "") + (result? "/": "") + result;
 		
-		if(node instanceof Attr) node = node.ownerElement;
-		else node = node.parentNode;
-
+		node = node.parentElement;
 	}
 
 	return result;
+}
+
+function isClassNameUnique(node)
+{
+	if(!node.className || !node.className.replace(firepathClass, ''))
+	{
+		return '';
+	}
+	var classname = node.className.replace(firepathClass, '');
+	var doc = node.ownerDocument;
+	//avoid to use classname contains too many spaces
+	if(classname.split(' ').length > 3) 
+	{ 
+		return '';
+	}		
+	if(doc.getElementsByClassName(classname).length == 1)
+	{
+		return classname;
+	}
+	return '';
 }
 
 const firepathClass = /\s*firepath-matching-node\s*/g;
@@ -1065,38 +1096,104 @@ FBL.getCssSelectorFromNode = function (node, context) {
 		parent = context || node.ownerDocument,
 		stop = false,
 		str;
+	var classpath = '';
 	
 	while (node && node != parent && !stop) {
 		if(node.nodeType === Node.ELEMENT_NODE) {
 			if(node.id) {
 				str = '#' + node.id;
 				stop = true;
-			} else if(node.className && node.className.replace(firepathClass, '')) {
-				str = '.' + node.className.replace(firepathClass, ' ').trim()
-					.replace(multipleSpace, ' ').split(' ').join('.');
+			} else if(node.tagName == 'LABEL' && isInForm(node) && (_for = getForAttribute(node))){
+				str = "[for='" + _for + "']";
+				stop = true;				
+			} else if(classpath = getUniqueClassPath(node)) {
+				str = classpath;
 				stop = true;
-			} else {
-				str = node.localName.toLowerCase();
+			} else if(isTagNameUnique(node)) {
+				str = node.tagName.toLowerCase();
+				stop = true;
+			} 
+			else {
+        
+        var position = getNodePosition(node);
+        if(position)
+        {
+           str = node.tagName.toLowerCase() + ':nth-of-type(' + getNodePosition(node) +  ')';
+        }
+        else
+        {
+           str = node.tagName.toLowerCase()
+        }       
 			}
-			
 			result = str + (result? '>' + result: ''); 
-		}
-		
-		if(node instanceof Attr) {
-			node = node.ownerElement;
-		} else {
-			node = node.parentNode;
-		}
+
+		}		
+    
+		node = node.parentElement;
+
 	}
 	
 	return result;
 }
 
-function getNodePosition(node) {
-	if (!node.parentNode)
-		return null;
+function getUniqueClassPath(node){
+
+	if(!node.className || !node.className.replace(firepathClass, ''))
+	{
+		return '';
+	}
+	var className = node.className.replace(firepathClass, '').split(' ');
+	var len = className.length;
+	var selector = '.' + className[len - 1];
+	var document = node.ownerDocument;
+	for(i=len - 1; i>=0; i--)
+	{		
+		if(document.querySelectorAll(selector).length == 1)
+			return selector;
+		selector = '.' + className[i] + selector;
+		
+	}
+	return '';
+}
+
+function isInForm(node)
+{
+	if(!node.form)
+	{
+		return false;    
+	}
+	return true;
+}
+
+function getForAttribute(node)
+{
+	var toReturn = ''
+	var document = node.ownerDocument;
+	if(node.hasAttribute('for'))
+	{
+		toReturn = node.attributes['for'].value;
+		if(document.querySelectorAll("[for='" + toReturn + "']").length != 1)
+		{
+			toReturn = '';
+		}
+		
+	}
 	
-	var siblings = node.parentNode.childNodes;
+	return toReturn;
+}
+
+function isTagNameUnique(node)
+{
+	var tag = node.tagName.toLowerCase();
+	var doc = node.ownerDocument;
+	return doc.getElementsByTagName(tag).length == 1;
+}
+
+function getNodePosition(node) {
+	if (!node.parentElement)
+		return '';
+	
+	var siblings = node.parentElement.children;
 	var count = 0;
 	var position;
 	
@@ -1111,7 +1208,7 @@ function getNodePosition(node) {
 	if (count > 1)
 		return position;
 	else
-		return null;
+		return '';
 }
 
 // ************************************************************************************************
