@@ -1101,7 +1101,14 @@ FBL.getCssSelectorFromNode = function (node, context) {
 	while (node && node != parent && !stop) {
 		if(node.nodeType === Node.ELEMENT_NODE) {
 			if(node.id) {
-				str = '#' + node.id;
+				if(node.id.indexOf(' ')>0)
+				{
+					str = "[id='" + node.id + "']";
+				}
+				else
+				{
+					str = '#' + node.id;
+				}	
 				stop = true;
 			} else if(node.tagName == 'LABEL' && isInForm(node) && (_for = getForAttribute(node))){
 				str = "[for='" + _for + "']";
